@@ -8,6 +8,7 @@ mod page_width;
 mod theme;
 mod workspace;
 mod workspace_sidebar;
+mod zoom;
 
 use dioxus::desktop::{Config, WindowBuilder};
 use dioxus::prelude::*;
@@ -30,6 +31,8 @@ fn main() {
 #[component]
 fn App() -> Element {
     theme::use_appearance_menu();
+    let zoom = zoom::use_zoom_shortcuts();
+    let scale = f64::from(zoom()) / 100.0;
     let mut opened = use_signal(|| None::<workspace::OpenNotebook>);
     let page_width = use_signal(page_width::PageWidth::default);
     let mut opening = use_signal(|| false);
@@ -60,7 +63,7 @@ fn App() -> Element {
         document::Stylesheet { href: asset!("/assets/app.css") }
         document::Stylesheet { href: "{mono}/fonts.css" }
         if let Some(notebook) = opened() {
-            workspace::Workspace { opened: notebook, page_width, on_home: move |_| opened.set(None) }
+            workspace::Workspace { opened: notebook, page_width, zoom: scale, on_home: move |_| opened.set(None) }
         } else {
             main { class: "landing", aria_busy: opening(),
                 pre { class: "black-hole", aria_hidden: true,

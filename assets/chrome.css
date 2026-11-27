@@ -1,6 +1,7 @@
 .notebook-chrome {
     --chrome-control-size: clamp(22px, 4.5vw, 24px);
-    --chrome-left-inset: 82px;
+    /* Native traffic lights do not scale with the WebView. */
+    --chrome-left-inset: calc(82px / var(--ui-zoom, 1));
     --chrome-title-inset: min(clamp(172px, 40vw, 264px), 50%);
     position: relative;
     /* The native traffic lights are centered 16px from the top. */
@@ -174,7 +175,7 @@
 
 @media (max-width: 520px) {
     .notebook-chrome {
-        --chrome-left-inset: 76px;
+        --chrome-left-inset: calc(76px / var(--ui-zoom, 1));
     }
 
     .workspace[data-sidebar-open="true"] .chrome-reveal::before {

@@ -47,6 +47,7 @@ pub(crate) async fn pick_notebook(start_new: bool) -> io::Result<Option<OpenNote
 pub(crate) fn Workspace(
     opened: OpenNotebook,
     page_width: Signal<PageWidth>,
+    zoom: f64,
     on_home: EventHandler<()>,
 ) -> Element {
     let root = use_signal(|| opened.root);
@@ -290,7 +291,7 @@ pub(crate) fn Workspace(
         main {
             class: "workspace",
             "data-sidebar-open": sidebar_open(),
-            style: "--editor-page-width: {columns}ch",
+            style: "--editor-page-width: {columns}ch; --ui-zoom: {zoom}",
             aria_busy: busy() && confirmation.read().is_none(),
             onkeydown: move |event| {
                 if event.key() == Key::Escape && !event.is_composing() {
