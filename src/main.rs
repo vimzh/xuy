@@ -7,6 +7,7 @@ mod notebook_menu;
 mod page_width;
 mod theme;
 mod workspace;
+mod workspace_session;
 mod workspace_sidebar;
 mod zoom;
 
@@ -35,8 +36,26 @@ fn App() -> Element {
     let scale = f64::from(zoom()) / 100.0;
     let mut opened = use_signal(|| None::<workspace::OpenNotebook>);
     let page_width = use_signal(page_width::PageWidth::default);
-    let mut opening = use_signal(|| false);
+    let mut opening = use_signal(|| true);
     let mut error = use_signal(|| None::<String>);
+    use_future(move || async move {
+        let restored = match workspace_session::load() {
+            Ok(Some(session)) => workspace::OpenNotebook::restore(session).await.map(Some),
+            Ok(None) => Ok(None),
+            Err(failure) => Err(failure),
+        };
+        match restored {
+            Ok(Some((notebook, warning))) => {
+                opened.set(Some(notebook));
+                error.set(warning);
+            }
+            Ok(None) => {}
+            Err(failure) => error.set(Some(format!(
+                "Could not restore the last notebook. {failure}"
+            ))),
+        }
+        opening.set(false);
+    });
     let icons = asset!("/assets/hugeicons", AssetOptions::folder());
     let mono = asset!("/assets/ia-writer-mono", AssetOptions::folder());
     let actions = [
@@ -63,7 +82,14 @@ fn App() -> Element {
         document::Stylesheet { href: asset!("/assets/app.css") }
         document::Stylesheet { href: "{mono}/fonts.css" }
         if let Some(notebook) = opened() {
-            workspace::Workspace { opened: notebook, page_width, zoom: scale, on_home: move |_| opened.set(None) }
+            workspace::Workspace {
+                opened: notebook, page_width, zoom: scale, error,
+                on_home: move |_| {
+                    workspace_session::clear();
+                    error.set(None);
+                    opened.set(None);
+                },
+            }
         } else {
             main { class: "landing", aria_busy: opening(),
                 pre { class: "black-hole", aria_hidden: true,
