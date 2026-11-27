@@ -14,7 +14,7 @@ use crate::note_history::NoteHistory;
 use crate::notebook::{self, Entry};
 use crate::notebook_menu;
 use crate::page_width::PageWidth;
-use crate::workspace_sidebar::WorkspaceSidebar;
+use crate::workspace_sidebar::{SidebarDivider, WorkspaceSidebar};
 
 #[derive(Clone, PartialEq)]
 pub(crate) struct OpenNotebook {
@@ -296,6 +296,7 @@ pub(crate) fn Workspace(
                         on_browse: move |entry| browse(entry, None),
                     },
                 }
+                SidebarDivider {}
                 div { class: "workspace-content",
                     if let Some(message) = error() {
                         p { class: "workspace-error", role: "alert", "{message}" }

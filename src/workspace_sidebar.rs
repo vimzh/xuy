@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use dioxus::prelude::*;
+use dioxus::prelude::{dioxus_core::use_drop, *};
 use time::{Date, OffsetDateTime, UtcOffset};
 
 use crate::notebook::{self, Entry};
@@ -127,6 +127,35 @@ pub(crate) fn WorkspaceSidebar(
                     })}
                 }
             }
+        }
+    }
+}
+
+#[component]
+pub(crate) fn SidebarDivider() -> Element {
+    let mut bridge = use_signal(|| None::<document::Eval>);
+    use_drop(move || {
+        if let Some(bridge) = *bridge.peek() {
+            let _ = bridge.send(());
+        }
+    });
+
+    rsx! {
+        div {
+            id: "workspace-sidebar-divider",
+            class: "workspace-sidebar-divider",
+            role: "separator",
+            tabindex: "0",
+            aria_label: "Resize notebook sidebar",
+            aria_orientation: "vertical",
+            aria_controls: "workspace-sidebar",
+            onmounted: move |_| async move {
+                let resize = document::eval(include_str!("sidebar_resize.js"));
+                bridge.set(Some(resize));
+                if let Err(error) = resize.join::<()>().await {
+                    eprintln!("Could not initialize sidebar resizing: {error}");
+                }
+            },
         }
     }
 }

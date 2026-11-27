@@ -1,5 +1,8 @@
 .workspace {
-    --sidebar-width: clamp(264px, 25%, 300px);
+    --sidebar-min-width: 160px;
+    --sidebar-max-width: min(480px, 50vw);
+    --sidebar-default-width: clamp(264px, 25vw, 300px);
+    --sidebar-width: clamp(var(--sidebar-min-width), var(--sidebar-preferred-width, var(--sidebar-default-width)), var(--sidebar-max-width));
     --sidebar-track: var(--sidebar-width);
     --sidebar-motion: 260ms cubic-bezier(.22, .8, .2, 1);
     position: fixed;
@@ -48,6 +51,7 @@
 }
 
 .workspace-body {
+    position: relative;
     min-height: 0;
     display: grid;
     grid-template-columns: var(--sidebar-track) minmax(0, 1fr);
@@ -65,12 +69,48 @@
 .workspace-sidebar > .notebook-sidebar {
     box-sizing: border-box;
     width: var(--sidebar-width);
+    min-width: var(--sidebar-min-width);
+    max-width: var(--sidebar-max-width);
     transform: translateX(0);
     transition: transform var(--sidebar-motion);
 }
 
 .workspace-sidebar[inert] > .notebook-sidebar {
     transform: translateX(32px);
+}
+
+.workspace-sidebar-divider {
+    position: absolute;
+    z-index: 1;
+    grid-area: 1 / 2;
+    inset-block: 0;
+    inset-inline-start: -6px;
+    width: 12px;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.workspace-sidebar-divider:focus-visible {
+    outline: 1px solid var(--focus);
+    outline-offset: -1px;
+}
+
+.workspace-sidebar-divider:hover::before,
+.workspace[data-sidebar-resizing] .workspace-sidebar-divider::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 5px;
+    width: 2px;
+    background: var(--focus);
+}
+
+.workspace[data-sidebar-open="false"] .workspace-sidebar-divider {
+    display: none;
+}
+
+.workspace[data-sidebar-open="true"][data-sidebar-resizing] :is(.workspace-body, .chrome-sidebar-rule) {
+    transition: none;
 }
 
 .workspace-content,
@@ -199,6 +239,10 @@
 }
 
 @media (max-width: 520px) {
+    .workspace-sidebar-divider {
+        display: none;
+    }
+
     .workspace-body {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: auto minmax(0, 1fr);
@@ -216,6 +260,8 @@
 
     .workspace-sidebar .notebook-sidebar {
         width: 100%;
+        min-width: 0;
+        max-width: none;
         border-right: 0;
         border-bottom: 1px solid var(--workspace-rule);
     }
