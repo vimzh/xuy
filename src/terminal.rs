@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use dioxus::prelude::{dioxus_core::use_drop, *};
 use tokio::sync::mpsc;
 
+use crate::ui::Button;
+
 mod pty;
 
 pub(crate) const OPEN: &str = "terminal-open";
@@ -35,8 +37,8 @@ pub(crate) fn TerminalPanel(mut state: Signal<State>, folder: PathBuf, zoom: f64
             header { class: "terminal-header",
                 span { "Terminal" }
                 if let Some(message) = status() { span { class: "terminal-status", role: "status", "{message}" } }
-                button { r#type: "button", onclick: move |_| state.set(State::Minimized), "Minimize" }
-                button { r#type: "button", onclick: move |_| state.set(State::Closed), "Close" }
+                Button { onclick: move |_| state.set(State::Minimized), "Minimize" }
+                Button { onclick: move |_| state.set(State::Closed), "Close" }
             }
             div { id: "notebook-terminal", class: "terminal-screen", "data-zoom": "{zoom}",
                 "data-module": asset!("/assets/xterm/xterm.js"),

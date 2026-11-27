@@ -2,13 +2,13 @@
 
 use dioxus::prelude::*;
 
-use crate::ui::{Button, ButtonKind};
 use crate::appearance::{ScenePreferences, SceneSelect};
 use crate::cursor::{CursorOptions, CursorSettings};
 use crate::font_size::{FontPreference, FontSizeSelect};
 use crate::modal::run_dialog;
 use crate::page_width::{PageWidth, PageWidthSelect};
 use crate::theme::{Appearance, ThemeSelect};
+use crate::ui::{Button, ButtonKind};
 use crate::writing_style::{WritingStyle, WritingStyleSettings};
 
 #[component]

@@ -3,6 +3,7 @@
 use dioxus::prelude::{dioxus_core::use_drop, *};
 
 use crate::highlight::Color;
+use crate::ui::Button;
 
 #[component]
 pub(super) fn FormatMenu(
@@ -28,23 +29,23 @@ pub(super) fn FormatMenu(
                     eprintln!("Could not initialize the text formatting menu: {error}");
                 }
             },
-            button { r#type: "button", autofocus: true, "data-format": "**",
+            Button { autofocus: true, "data-format": "**",
                 strong { class: "format-sample", aria_hidden: true, "B" }
                 "Bold"
             }
-            button { r#type: "button", "data-format": "*",
+            Button { "data-format": "*",
                 em { class: "format-sample", aria_hidden: true, "I" }
                 "Italic"
             }
-            button { r#type: "button", "data-format": "~~",
+            Button { "data-format": "~~",
                 s { class: "format-sample", aria_hidden: true, "S" }
                 "Strikethrough"
             }
             div { class: "format-palette", role: "group", aria_label: "Highlight",
                 span { class: "format-palette-label", aria_hidden: true, "Highlight" }
                 for color in Color::ALL {
-                    button {
-                        key: "{color.class()}", r#type: "button", disabled: highlighting,
+                    Button {
+                        key: "{color.class()}", disabled: highlighting,
                         title: "{color.name()}", aria_label: "Highlight {color.name()}",
                         onclick: move |_| on_highlight.call(color),
                         span { class: "highlight-swatch {color.class()}", aria_hidden: true }

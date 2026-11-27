@@ -9,6 +9,8 @@ use tokio::{
     time::{Duration, sleep},
 };
 
+use crate::ui::Button;
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub(crate) enum Conflict {
     Changed(String),
@@ -120,11 +122,11 @@ pub(crate) fn ExternalEditNotice(
             match conflict {
                 Conflict::Changed(text) => rsx! {
                     details { summary { "Review disk version" } pre { "{text}" } }
-                    button { r#type: "button", disabled: busy, onclick: move |_| on_reload.call(()), "Use Disk Version" }
+                    Button { disabled: busy, onclick: move |_| on_reload.call(()), "Use Disk Version" }
                 },
                 Conflict::Unavailable(error) => rsx! { p { "{error}" } },
             }
-            button { r#type: "button", disabled: busy, onclick: move |_| on_save_copy.call(()), "Save Draft as Copy" }
+            Button { disabled: busy, onclick: move |_| on_save_copy.call(()), "Save Draft as Copy" }
         }
     }
 }

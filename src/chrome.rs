@@ -9,6 +9,7 @@ use dioxus_elements::input_data::MouseButton;
 use crate::dropdown::Dropdown;
 use crate::editor::ViewMode;
 use crate::page_width::{PageWidth, PageWidthSelect};
+use crate::ui::Button;
 
 #[component]
 pub(crate) fn NotebookChrome(
@@ -69,8 +70,7 @@ pub(crate) fn NotebookChrome(
                 span { class: "chrome-sidebar-rule", aria_hidden: true }
                 if !chrome_hidden {
                     div { class: "chrome-left",
-                        button {
-                            r#type: "button",
+                        Button {
                             aria_label: sidebar_label,
                             aria_expanded: sidebar_open,
                             aria_controls: "workspace-sidebar",
@@ -80,16 +80,14 @@ pub(crate) fn NotebookChrome(
                             img { src: "{icons}/sidebar-left.svg", alt: "", width: "18", height: "18" }
                         }
                         div { class: "chrome-history",
-                            button {
-                                r#type: "button",
+                            Button {
                                 aria_label: "Back",
                                 title: "Back",
                                 disabled: !can_back,
                                 onclick: move |_| on_back.call(()),
                                 img { src: "{icons}/arrow-left-01.svg", alt: "", width: "18", height: "18" }
                             }
-                            button {
-                                r#type: "button",
+                            Button {
                                 aria_label: "Forward",
                                 title: "Forward",
                                 disabled: !can_forward,
@@ -99,8 +97,7 @@ pub(crate) fn NotebookChrome(
                         }
                         div { class: "chrome-folder",
                             if let Some(parent) = parent {
-                                button {
-                                    r#type: "button",
+                                Button {
                                     aria_label: "Up to parent folder",
                                     title: "Up to parent folder",
                                     disabled: busy,
@@ -139,8 +136,7 @@ pub(crate) fn NotebookChrome(
                                 }
                             }
                         }
-                        button {
-                            r#type: "button",
+                        Button {
                             aria_label: writing_sidebar_label,
                             aria_expanded: writing_sidebar_open,
                             aria_controls: writing_sidebar_open.map(|_| "writing-sidebar"),

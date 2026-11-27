@@ -26,6 +26,7 @@ mod preview_edit;
 mod settings;
 mod terminal;
 mod theme;
+mod ui;
 mod workspace;
 mod workspace_session;
 mod workspace_sidebar;
@@ -37,6 +38,8 @@ use dioxus::desktop::{Config, WindowBuilder, tao::dpi::LogicalSize, use_muda_eve
 use dioxus::prelude::*;
 use font_size::FontPreference;
 use std::path::PathBuf;
+
+use crate::ui::Button;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ChooseFolder {
@@ -309,8 +312,7 @@ fn App() -> Element {
             main { class: "landing", aria_label: "xuy", aria_busy: opening(),
                 nav { aria_label: "Notebook actions",
                     for (label, shortcut, icon) in actions {
-                        button { key: "{label}",
-                            r#type: "button",
+                        Button { key: "{label}",
                             aria_keyshortcuts: "Meta+{shortcut}",
                             disabled: opening(),
                             onclick: move |_| async move {

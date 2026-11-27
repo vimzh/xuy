@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use dioxus::prelude::*;
 
 use crate::modal::show_dialog;
+use crate::ui::{Button, ButtonKind};
 
 #[cfg(target_os = "macos")]
 use objc2_foundation::{NSArray, NSString, NSUserDefaults};
@@ -88,8 +89,8 @@ pub(crate) fn NotebookPicker(
                 ul {
                     for path in saved() {
                         li { key: "{path:?}",
-                            button { r#type: "button", disabled: busy,
-                                onclick: move |_| on_open.call(path.clone()),
+                            Button { disabled: busy,
+                                onclick: { let path = path.clone(); move |_| on_open.call(path.clone()) },
                                 span { "{path.file_name().unwrap_or(path.as_os_str()).to_string_lossy()}" }
                                 small { "{path.display()}" }
                             }
@@ -101,8 +102,8 @@ pub(crate) fn NotebookPicker(
                 p { role: "alert", "{message}" }
             }
             form { method: "dialog",
-                button { r#type: "button", disabled: busy, onclick: move |_| on_add.call(()), "Add Folder…" }
-                button { r#type: "submit", disabled: busy, "Done" }
+                Button { disabled: busy, onclick: move |_| on_add.call(()), "Add Folder…" }
+                Button { kind: ButtonKind::Submit, disabled: busy, "Done" }
             }
         }
     }

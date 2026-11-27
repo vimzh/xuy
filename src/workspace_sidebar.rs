@@ -9,6 +9,7 @@ use time::OffsetDateTime;
 use crate::notebook::Entry;
 use crate::notebook_index::{FolderIndex, local_today, modified_label, use_indexed_rows};
 use crate::notebook_menu::{NEW_FOLDER, NEW_NOTE};
+use crate::ui::Button;
 
 #[component]
 pub(crate) fn WorkspaceSidebar(
@@ -74,9 +75,8 @@ pub(crate) fn WorkspaceSidebar(
                         };
                         rsx! {
                             li { key: "{entry.path:?}",
-                                button {
+                                Button {
                                     class: "sidebar-entry",
-                                    r#type: "button",
                                     disabled: busy,
                                     aria_current: active.then_some("true"),
                                     title: "{name}",
@@ -117,8 +117,7 @@ fn SidebarContextMenu(on_action: EventHandler<&'static str>) -> Element {
     rsx! {
         div { id: "sidebar-context-menu", popover: "auto", role: "group",
             aria_label: "Create in the current folder",
-            button {
-                r#type: "button",
+            Button {
                 autofocus: true,
                 popovertarget: "sidebar-context-menu",
                 popovertargetaction: "hide",
@@ -126,8 +125,7 @@ fn SidebarContextMenu(on_action: EventHandler<&'static str>) -> Element {
                 img { class: "sidebar-entry-icon", src: asset!("/assets/hugeicons/file-02.svg"), alt: "" }
                 "New Page…"
             }
-            button {
-                r#type: "button",
+            Button {
                 popovertarget: "sidebar-context-menu",
                 popovertargetaction: "hide",
                 onclick: move |_| on_action.call(NEW_FOLDER),

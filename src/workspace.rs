@@ -25,6 +25,7 @@ use crate::notebook_menu;
 use crate::page_width::PageWidth;
 use crate::performance::PerformancePanel;
 use crate::terminal::{self, TerminalPanel};
+use crate::ui::{Button, ButtonKind};
 use crate::workspace_session;
 use crate::workspace_sidebar::{SidebarDivider, WorkspaceSidebar};
 use crate::writing_style::WritingStyle;
@@ -648,12 +649,12 @@ pub(crate) fn Workspace(
         if confirmation.read().is_some() {
             div { class: "unsaved-choice",
                 span { role: "alert", "Discard unsaved changes?" }
-                button {
-                    onmounted: move |event| async move { let _ = event.set_focus(true).await; },
+                Button {
+                    onmounted: move |event: MountedEvent| async move { let _ = event.set_focus(true).await; },
                     onclick: move |_| resolve_confirmation(false),
                     "Keep editing"
                 }
-                button { onclick: move |_| resolve_confirmation(true), "Discard changes" }
+                Button { onclick: move |_| resolve_confirmation(true), "Discard changes" }
             }
         }
         if let Some(kind) = naming() {
@@ -669,8 +670,8 @@ pub(crate) fn Workspace(
                     onmounted: move |event| async move { let _ = event.set_focus(true).await; },
                     oninput: move |event| name.set(event.value()),
                 }
-                button { r#type: "submit", disabled: busy(), "Create" }
-                button { r#type: "button", disabled: busy(), onclick: move |_| naming.set(None), "Cancel" }
+                Button { kind: ButtonKind::Submit, disabled: busy(), "Create" }
+                Button { disabled: busy(), onclick: move |_| naming.set(None), "Cancel" }
             }
         }
     };

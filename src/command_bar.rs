@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 use crate::modal::run_dialog;
+use crate::ui::{Button, ButtonKind};
 
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct Command {
@@ -144,7 +145,7 @@ pub(crate) fn CommandBar(
                     onkeydown: on_key,
                 }
                 form { method: "dialog",
-                    button { r#type: "submit", aria_label: "Close command bar",
+                    Button { kind: ButtonKind::Submit, aria_label: "Close command bar",
                         img { src: "{icons}/cancel-01.svg", alt: "", width: "16", height: "16" }
                     }
                 }
@@ -157,7 +158,7 @@ pub(crate) fn CommandBar(
                                 if command.setting { "Settings" } else { "Actions" }
                             }
                         }
-                        button { r#type: "button", id: "command-{command.id}",
+                        Button { id: "command-{command.id}",
                             "data-selected": selected == Some(command),
                             aria_current: command.current.then_some("true"),
                             onclick: move |_| choose(command),

@@ -3,6 +3,7 @@
 use dioxus::prelude::*;
 
 use crate::modal::show_dialog;
+use crate::ui::{Button, ButtonKind};
 
 #[component]
 pub(crate) fn UserGuide(on_close: EventHandler<()>) -> Element {
@@ -14,7 +15,7 @@ pub(crate) fn UserGuide(on_close: EventHandler<()>) -> Element {
                 dangerous_inner_html: "{content}"
             }
             form { method: "dialog",
-                button { r#type: "submit", "Done" }
+                Button { kind: ButtonKind::Submit, "Done" }
             }
         }
     }

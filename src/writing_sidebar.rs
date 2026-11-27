@@ -2,6 +2,7 @@
 
 use dioxus::prelude::*;
 
+use crate::ui::Button;
 use crate::{highlight::Color, note_status::NoteSummary};
 
 #[component]
@@ -18,9 +19,9 @@ pub(crate) fn WritingSidebar(
     rsx! {
         aside { id: "writing-sidebar", class: "writing-sidebar", aria_label: "Note tools", hidden: !open,
             div { class: "writing-modes", role: "group", aria_label: "Note tools view",
-                button { r#type: "button", aria_pressed: !show_highlights(),
+                Button { aria_pressed: !show_highlights(),
                     aria_controls: "writing-tools-view", onclick: move |_| show_highlights.set(false), "Outline" }
-                button { r#type: "button", aria_pressed: show_highlights(),
+                Button { aria_pressed: show_highlights(),
                     aria_controls: "writing-tools-view", onclick: move |_| show_highlights.set(true), "Highlights" }
             }
             div { id: "writing-tools-view", class: "writing-tools-view",
@@ -31,14 +32,14 @@ pub(crate) fn WritingSidebar(
                     }
                     div { class: "highlight-colors", role: "group", aria_label: "Highlight color",
                         for color in Color::ALL {
-                            button { key: "{color.class()}", r#type: "button", disabled: preview || busy,
+                            Button { key: "{color.class()}", disabled: preview || busy,
                                 onclick: move |_| on_highlight.call(Some(color)),
                                 span { class: "highlight-swatch {color.class()}", aria_hidden: true }
                                 "{color.name()}"
                             }
                         }
                     }
-                    button { class: "highlight-clear", r#type: "button", disabled: preview || busy,
+                    Button { class: "highlight-clear", disabled: preview || busy,
                         onclick: move |_| on_highlight.call(None), "Clear highlight" }
                     if let Some(message) = feedback() {
                         p { class: "writing-hint", role: "status", "{message}" }
@@ -51,7 +52,7 @@ pub(crate) fn WritingSidebar(
                             li { key: "{index}",
                                 style: "--heading-depth: {heading.depth}",
                                 "data-child": heading.depth > 0,
-                                button { r#type: "button", disabled: busy,
+                                Button { disabled: busy,
                                     onclick: { let offset = heading.offset; move |_| on_jump.call((index, offset)) },
                                     "{heading.title()}"
                                 }
