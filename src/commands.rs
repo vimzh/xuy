@@ -44,13 +44,9 @@ pub(crate) fn terminal_commands(state: State) -> Vec<Command> {
 }
 
 const WIDTHS: [(PageWidth, &str, &str); 3] = [
-    (PageWidth::Narrow, "width-narrow", "Narrow Writing Width"),
-    (
-        PageWidth::Standard,
-        "width-standard",
-        "Standard Writing Width",
-    ),
-    (PageWidth::Wide, "width-wide", "Wide Writing Width"),
+    (PageWidth::Narrow, "width-narrow", "Narrow"),
+    (PageWidth::Standard, "width-standard", "Standard"),
+    (PageWidth::Wide, "width-wide", "Wide"),
 ];
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -173,28 +169,28 @@ pub(crate) fn settings(
 ) -> impl Iterator<Item = Command> {
     let themes = crate::theme::OPTIONS.map(|(option, id, _)| {
         let label = match option {
-            Appearance::System => "System Theme",
-            Appearance::Light => "Light Theme",
-            Appearance::Dark => "Dark Theme",
+            Appearance::System => "System",
+            Appearance::Light => "Light",
+            Appearance::Dark => "Dark",
         };
         Command::new(
             id,
-            label,
+            "Theme",
             "settings-01",
             "",
             "settings appearance color mode",
         )
-        .setting(appearance == option)
+        .setting_value(label, appearance == option)
     });
     let widths = WIDTHS.map(|(option, id, label)| {
         Command::new(
             id,
-            label,
+            "Writing Width",
             "arrow-horizontal",
             "",
             "settings editor page width",
         )
-        .setting(width == option)
+        .setting_value(label, width == option)
     });
     let preview_editing = Command::new(
         notebook_menu::TOGGLE_PREVIEW_EDITING,
@@ -211,31 +207,34 @@ pub(crate) fn settings(
     let zoom = [
         Command::new(
             ZOOM_IN,
-            "Zoom In",
+            "Zoom",
             "add-01",
             "⌘+",
             "settings interface scale larger",
-        ),
+        )
+        .setting_value("In", false),
         Command::new(
             ZOOM_OUT,
-            "Zoom Out",
+            "Zoom",
             "remove-01",
             "⌘−",
             "settings interface scale smaller",
-        ),
+        )
+        .setting_value("Out", false),
         Command::new(
             RESET_ZOOM,
-            "Reset Zoom",
+            "Zoom",
             "arrow-horizontal",
             "",
             "settings interface scale 100% default",
-        ),
+        )
+        .setting_value("Reset", false),
     ];
     themes
         .into_iter()
         .chain(widths)
         .chain([preview_editing])
-        .chain(zoom.map(|command| command.setting(false)))
+        .chain(zoom)
 }
 
 pub(crate) fn width_for_id(id: &str) -> Option<PageWidth> {

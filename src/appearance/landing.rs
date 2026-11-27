@@ -125,17 +125,17 @@ pub(crate) fn scene_commands(
     preferences: ScenePreferences,
 ) -> impl Iterator<Item = Command> {
     let selected = preferences.selection(dark);
-    std::iter::once((RANDOM_ID, "Random Landing Scene"))
+    std::iter::once((RANDOM_ID, "Random"))
         .chain(scenes(dark).iter().map(|scene| (scene.id, scene.label)))
         .map(move |(id, label)| {
             Command::new(
                 id,
-                label,
+                "Landing Scene",
                 "home-01",
                 "",
                 "settings landing scene home background artwork",
             )
-            .setting(id == selected)
+            .setting_value(label, id == selected)
         })
 }
 

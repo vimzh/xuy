@@ -124,6 +124,11 @@
     font-size: 11px;
 }
 
+.command-value {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
 .command-current {
     color: var(--muted);
 }

@@ -51,14 +51,14 @@ impl Command {
         if self.value.is_empty() {
             self.label.to_owned()
         } else {
-            format!("{} · {}", self.label, self.value)
+            format!("{}: {}", self.label, self.value)
         }
     }
 }
 
 fn matching_commands(commands: &[Command], query: &str) -> Vec<Command> {
-    let query = query.to_lowercase();
-    commands
+    let query = query.to_lowercase().replace(':', " ");
+    let mut matches: Vec<_> = commands
         .iter()
         .copied()
         .filter(|command| {
@@ -68,7 +68,9 @@ fn matching_commands(commands: &[Command], query: &str) -> Vec<Command> {
                 label.contains(word) || value.contains(word) || command.keywords.contains(word)
             })
         })
-        .collect()
+        .collect();
+    matches.sort_by_key(|command| (command.setting, command.label));
+    matches
 }
 
 pub(crate) fn close() {
@@ -88,14 +90,6 @@ pub(crate) fn CommandBar(
     let selected = options
         .get(active().min(options.len().saturating_sub(1)))
         .copied();
-    let settings_start = if query.read().trim().is_empty() {
-        options
-            .iter()
-            .find(|command| command.setting)
-            .map(|command| command.id)
-    } else {
-        None
-    };
     let mut choose = move |command: Command| {
         chosen.set(Some(command.id));
         close();
@@ -156,17 +150,25 @@ pub(crate) fn CommandBar(
                 }
             }
             ul { id: "command-options", aria_label: "Commands",
-                for command in options {
+                for (index, &command) in options.iter().enumerate() {
                     li { key: "{command.id}",
-                        if settings_start == Some(command.id) {
-                            div { class: "command-section", "Settings" }
+                        if index == 0 || options[index - 1].setting != command.setting {
+                            div { class: "command-section",
+                                if command.setting { "Settings" } else { "Actions" }
+                            }
                         }
                         button { r#type: "button", id: "command-{command.id}",
                             "data-selected": selected == Some(command),
                             aria_current: command.current.then_some("true"),
                             onclick: move |_| choose(command),
                             img { src: "{icons}/{command.icon}.svg", alt: "", width: "18", height: "18" }
-                            span { "{command.title()}" }
+                            span {
+                                "{command.label}"
+                                if !command.value.is_empty() {
+                                    ": "
+                                    span { class: "command-value", "{command.value}" }
+                                }
+                            }
                             if command.current {
                                 span { class: "command-current", aria_hidden: true, "✓" }
                             } else if !command.shortcut.is_empty() {
@@ -312,8 +314,8 @@ mod tests {
             ("writing font jetbrains", "font-jetbrains"),
             ("relaxed line height", "spacing-relaxed"),
             ("code theme graphite", "code-theme-graphite"),
-            ("settings font size 15", "settings-font-15"),
-            ("markdown font size 18", "markdown-font-18"),
+            ("Settings font size: 15", "settings-font-15"),
+            ("Markdown font size:18", "markdown-font-18"),
         ] {
             let matches = matching_commands(&settings, query);
             assert_eq!(matches.len(), 1, "{query}");
@@ -321,6 +323,21 @@ mod tests {
         }
         assert!(matching_commands(&settings, "settings font size 15")[0].current);
         assert!(matching_commands(&settings, "markdown font size 18")[0].current);
+    }
+
+    #[test]
+    fn sorts_action_and_setting_labels_without_reordering_setting_choices() {
+        let commands = [
+            Command::new("z", "Zoom", "", "", "").setting_value("Reset", false),
+            Command::new("b", "Save", "", "", ""),
+            Command::new("a", "Open", "", "", ""),
+            Command::new("size-9", "Size", "", "", "").setting_value("9 px", false),
+            Command::new("size-12", "Size", "", "", "").setting_value("12 px", true),
+        ];
+        let results = matching_commands(&commands, "");
+        let ids: Vec<_> = results.iter().map(|command| command.id).collect();
+        assert_eq!(ids, ["a", "b", "size-9", "size-12", "z"]);
+        assert_eq!(results[3].title(), "Size: 12 px");
     }
 
     #[test]

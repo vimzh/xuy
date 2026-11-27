@@ -108,12 +108,22 @@ impl CursorSetting {
         options.blink || !matches!(self, Self::Style(_))
     }
 
+    fn label(self) -> &'static str {
+        match self {
+            Self::Shape(_) => "Cursor Shape",
+            Self::Smooth(_) => "Cursor Movement",
+            Self::Blink(_) => "Cursor Blink",
+            Self::Style(_) => "Cursor Blink Style",
+            Self::CustomColor(_) => "Cursor Color",
+        }
+    }
+
     fn keywords(self) -> &'static str {
         match self {
             Self::Shape(_) => "settings editor cursor caret shape",
             Self::Smooth(_) => "settings editor cursor caret movement motion",
             Self::Blink(_) | Self::Style(_) => "settings editor cursor caret blink animation",
-            Self::CustomColor(_) => "settings editor cursor caret color appearance",
+            Self::CustomColor(_) => "settings editor cursor caret color appearance use",
         }
     }
 }
@@ -121,45 +131,21 @@ impl CursorSetting {
 const CURSOR_COMMANDS: [(&str, &str, CursorSetting); 11] = {
     use CursorSetting::*;
     [
-        ("cursor-shape-bar", "Bar Cursor", Shape(CursorShape::Bar)),
-        (
-            "cursor-shape-block",
-            "Block Cursor",
-            Shape(CursorShape::Block),
-        ),
+        ("cursor-shape-bar", "Bar", Shape(CursorShape::Bar)),
+        ("cursor-shape-block", "Block", Shape(CursorShape::Block)),
         (
             "cursor-shape-underline",
-            "Underline Cursor",
+            "Underline",
             Shape(CursorShape::Underline),
         ),
-        (
-            "cursor-immediate",
-            "Immediate Cursor Movement",
-            Smooth(false),
-        ),
-        ("cursor-smooth", "Smooth Cursor Movement", Smooth(true)),
-        ("cursor-blink-on", "Enable Cursor Blink", Blink(true)),
-        ("cursor-blink-off", "Disable Cursor Blink", Blink(false)),
-        (
-            "cursor-blink-sharp",
-            "Sharp Cursor Blink",
-            Style(BlinkStyle::Sharp),
-        ),
-        (
-            "cursor-blink-fade",
-            "Fade Cursor Blink",
-            Style(BlinkStyle::Fade),
-        ),
-        (
-            "cursor-color-custom",
-            "Use Custom Cursor Color",
-            CustomColor(true),
-        ),
-        (
-            "cursor-color-theme",
-            "Use Theme Cursor Color",
-            CustomColor(false),
-        ),
+        ("cursor-immediate", "Immediate", Smooth(false)),
+        ("cursor-smooth", "Smooth", Smooth(true)),
+        ("cursor-blink-on", "Enable", Blink(true)),
+        ("cursor-blink-off", "Disable", Blink(false)),
+        ("cursor-blink-sharp", "Sharp", Style(BlinkStyle::Sharp)),
+        ("cursor-blink-fade", "Fade", Style(BlinkStyle::Fade)),
+        ("cursor-color-custom", "Custom", CustomColor(true)),
+        ("cursor-color-theme", "Theme", CustomColor(false)),
     ]
 };
 
@@ -168,8 +154,8 @@ pub(crate) fn cursor_commands(options: CursorOptions) -> impl Iterator<Item = Co
         .into_iter()
         .filter(move |(_, _, setting)| setting.available(options))
         .map(move |(id, label, setting)| {
-            Command::new(id, label, "settings-01", "", setting.keywords())
-                .setting(setting.apply(options) == options)
+            Command::new(id, setting.label(), "settings-01", "", setting.keywords())
+                .setting_value(label, setting.apply(options) == options)
         })
 }
 
