@@ -8,6 +8,7 @@ use time::OffsetDateTime;
 
 use crate::notebook::Entry;
 use crate::notebook_index::{FolderIndex, local_today, modified_label, use_indexed_rows};
+use crate::notebook_menu::{NEW_FOLDER, NEW_NOTE};
 
 #[component]
 pub(crate) fn WorkspaceSidebar(
@@ -16,9 +17,14 @@ pub(crate) fn WorkspaceSidebar(
     selected: Option<PathBuf>,
     busy: bool,
     on_browse: EventHandler<Entry>,
+    on_context_action: EventHandler<&'static str>,
 ) -> Element {
-    #[cfg(target_os = "macos")]
-    let window = dioxus::desktop::use_window();
+    let mut menu_bridge = use_signal(|| None::<document::Eval>);
+    use_drop(move || {
+        if let Some(bridge) = menu_bridge.write().take() {
+            let _ = bridge.send(());
+        }
+    });
     let mut today = use_signal(local_today);
     use_future(move || async move {
         loop {
@@ -37,19 +43,18 @@ pub(crate) fn WorkspaceSidebar(
 
     rsx! {
         document::Stylesheet { href: asset!("/assets/sidebar.css") }
-        aside { class: "notebook-sidebar", aria_label: "Notebook files",
-            oncontextmenu: move |event| {
-                #[cfg(target_os = "macos")]
-                {
-                    event.prevent_default();
-                    if !busy {
-                        let window = window.window.clone();
-                        spawn(async move { crate::notebook_menu::show_sidebar(&window) });
-                    }
+        aside { id: "notebook-files", class: "notebook-sidebar", aria_label: "Notebook files",
+            aria_busy: busy,
+            aria_keyshortcuts: "Shift+F10",
+            tabindex: if ordered.is_empty() { "0" } else { "-1" },
+            onmounted: move |_| async move {
+                let bridge = document::eval(include_str!("sidebar_menu.js"));
+                menu_bridge.set(Some(bridge));
+                if let Err(error) = bridge.join::<()>().await {
+                    eprintln!("Could not initialize the sidebar menu: {error}");
                 }
-                #[cfg(not(target_os = "macos"))]
-                let _ = event;
             },
+            SidebarContextMenu { on_action: on_context_action }
             if let Some(error) = details_error() {
                 p { class: "sidebar-status", role: "status", title: "{error}", "Note details unavailable." }
             }
@@ -106,6 +111,32 @@ pub(crate) fn WorkspaceSidebar(
                         }
                     })}
                 }
+            }
+        }
+    }
+}
+
+#[component]
+fn SidebarContextMenu(on_action: EventHandler<&'static str>) -> Element {
+    rsx! {
+        div { id: "sidebar-context-menu", popover: "auto", role: "group",
+            aria_label: "Create in the current folder",
+            button {
+                r#type: "button",
+                autofocus: true,
+                popovertarget: "sidebar-context-menu",
+                popovertargetaction: "hide",
+                onclick: move |_| on_action.call(NEW_NOTE),
+                img { class: "sidebar-entry-icon", src: asset!("/assets/hugeicons/file-02.svg"), alt: "" }
+                "New Page…"
+            }
+            button {
+                r#type: "button",
+                popovertarget: "sidebar-context-menu",
+                popovertargetaction: "hide",
+                onclick: move |_| on_action.call(NEW_FOLDER),
+                img { class: "sidebar-entry-icon", src: asset!("/assets/hugeicons/folder-01.svg"), alt: "" }
+                "New Folder…"
             }
         }
     }

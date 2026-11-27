@@ -79,3 +79,34 @@
     color: var(--muted);
     font-size: 11px;
 }
+
+.notebook-sidebar:focus-visible {
+    outline: 1px solid var(--focus);
+    outline-offset: -2px;
+}
+
+#sidebar-context-menu {
+    position: fixed;
+    inset: 0 auto auto 0;
+    box-sizing: border-box;
+    min-width: min(10rem, calc(100vw - 12px));
+    max-width: calc(100vw - 12px);
+    max-height: calc(100dvh - 12px);
+    margin: 0;
+    padding: 4px;
+    border: 1px solid var(--control-border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 12px;
+    box-shadow: 0 4px 14px rgb(0 0 0 / 12%);
+}
+
+#sidebar-context-menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 30px;
+    padding: 4px 8px;
+}

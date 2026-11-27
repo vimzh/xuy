@@ -28,19 +28,6 @@ pub(crate) const NOTEBOOKS: &str = "xuy-notebooks";
 #[cfg(target_os = "macos")]
 const PREVIEW_EDITING_KEY: &str = "xuy.edit-in-preview";
 
-#[cfg(target_os = "macos")]
-pub(crate) fn show_sidebar(window: &dioxus::desktop::tao::window::Window) {
-    use dioxus::desktop::{muda::ContextMenu, tao::platform::macos::WindowExtMacOS};
-
-    let menu = Menu::with_items(&[
-        &MenuItem::with_id(NEW_NOTE, "New Page…", true, None),
-        &MenuItem::with_id(NEW_FOLDER, "New Folder…", true, None),
-    ])
-    .expect("build sidebar menu");
-    // Tao owns the view, and the desktop event loop runs on the main thread.
-    unsafe { menu.show_context_menu_for_nsview(window.ns_view(), None) };
-}
-
 struct Commands {
     new_note: MenuItem,
     new_folder: MenuItem,

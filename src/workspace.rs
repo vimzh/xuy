@@ -473,6 +473,7 @@ pub(crate) fn Workspace(
                         selected: selected(),
                         busy: busy(),
                         on_browse: move |entry| browse(entry, None, ViewMode::Edit),
+                        on_context_action: run_command,
                     },
                 }
                 SidebarDivider {}
