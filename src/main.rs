@@ -220,6 +220,7 @@ fn App() -> Element {
     let actions = [
         ("new", "N", "add-01"),
         ("open", "O", "folder-open"),
+        ("notebooks", "P", "notebook-01"),
         ("settings", ",", "settings-01"),
         ("docs", "D", "book-open-01"),
     ];
@@ -256,8 +257,15 @@ fn App() -> Element {
                 nav { aria_label: "Notebook actions",
                     for (label, shortcut, icon) in actions {
                         button { key: "{label}",
-                            disabled: opening() || !matches!(label, "new" | "open"),
-                            onclick: move |_| async move { choose(if label == "new" { ChooseFolder::NewNote } else { ChooseFolder::Open }).await },
+                            disabled: opening() || !matches!(label, "new" | "open" | "notebooks"),
+                            aria_keyshortcuts: (label == "notebooks").then_some("Meta+P"),
+                            onclick: move |_| async move {
+                                match label {
+                                    "notebooks" => run_app_command(notebook_menu::NOTEBOOKS),
+                                    "new" => choose(ChooseFolder::NewNote).await,
+                                    _ => choose(ChooseFolder::Open).await,
+                                }
+                            },
                             img { src: "{icons}/{icon}.svg", alt: "", width: "16", height: "16" }
                             span { "{label}" }
                             kbd { aria_hidden: true,
