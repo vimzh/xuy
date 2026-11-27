@@ -195,6 +195,14 @@
     line-height: var(--writing-line-height);
 }
 
+:is(.workspace-content, .note-input, .markdown-preview) {
+    scrollbar-width: none;
+}
+
+:is(.workspace-content, .note-input, .markdown-preview)::-webkit-scrollbar {
+    display: none;
+}
+
 .note-input {
     padding: 0;
     border: 0;
