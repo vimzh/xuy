@@ -388,6 +388,20 @@ pub(crate) fn Workspace(
         commands::NEXT_PAGE => {
             spawn(move_history(1));
         }
+        commands::INSERT_CODE_BLOCK if selected.peek().is_some() && !*busy.peek() => {
+            spawn(async move {
+                let mut edit = document::eval(include_str!("editor/insert_code_block.js"));
+                let result = edit.recv::<Option<String>>().await;
+                let _ = edit.send(());
+                match result {
+                    Ok(Some(message)) => error.set(Some(message)),
+                    Ok(None) => {}
+                    Err(failure) => {
+                        error.set(Some(format!("Could not insert the code block. {failure}")))
+                    }
+                }
+            });
+        }
         notebook_menu::SAVE => {
             spawn(save(None));
         }

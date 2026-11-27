@@ -6,6 +6,7 @@ use crate::{
 
 pub(crate) const PREVIOUS_PAGE: &str = "previous-page";
 pub(crate) const NEXT_PAGE: &str = "next-page";
+pub(crate) const INSERT_CODE_BLOCK: &str = "insert-code-block";
 pub(crate) const ZOOM_IN: &str = "zoom-in";
 pub(crate) const ZOOM_OUT: &str = "zoom-out";
 pub(crate) const RESET_ZOOM: &str = "reset-zoom";
@@ -92,6 +93,15 @@ pub(crate) fn notebook_commands(in_notebook: bool, page: PageActions) -> Vec<Com
                 "",
                 "split view markdown preview editor",
             ));
+            if page.view_mode != ViewMode::Preview {
+                commands.push(Command::new(
+                    INSERT_CODE_BLOCK,
+                    "Insert Code Block",
+                    "file-02",
+                    "",
+                    "markdown fenced code snippet add wrap selection",
+                ));
+            }
         }
         if page.has_page && page.dirty {
             commands.push(Command::new(

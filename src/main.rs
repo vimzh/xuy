@@ -204,6 +204,7 @@ fn App() -> Element {
                     | notebook_menu::SAVE
                     | commands::PREVIOUS_PAGE
                     | commands::NEXT_PAGE
+                    | commands::INSERT_CODE_BLOCK
                         if in_notebook =>
                     {
                         palette_command.set(Some(id))

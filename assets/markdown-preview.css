@@ -39,6 +39,32 @@
     font-weight: 600;
 }
 
+.markdown-preview pre:has(> code) {
+    --code-comment: light-dark(#645f55, #a39c90);
+    --code-keyword: light-dark(#355578, #a2b9db);
+    --code-string: light-dark(#435940, #a9bf99);
+    --code-literal: light-dark(#774c32, #d1a486);
+    --code-entity: light-dark(#345e59, #91bdb4);
+    border-radius: 5px;
+    background: light-dark(#ece9e2, #292b2d);
+    color: light-dark(#282620, #e1ded8);
+    font-family: var(--writing-code-font, "iA Writer Mono", Menlo, monospace);
+}
+
+[data-code-theme="paper"] .markdown-preview pre {
+    color-scheme: light;
+}
+
+[data-code-theme="graphite"] .markdown-preview pre {
+    color-scheme: dark;
+}
+
+.markdown-preview pre .syntax-comment { color: var(--code-comment); }
+.markdown-preview pre :is(.syntax-keyword, .syntax-storage) { color: var(--code-keyword); }
+.markdown-preview pre .syntax-string { color: var(--code-string); }
+.markdown-preview pre .syntax-constant { color: var(--code-literal); }
+.markdown-preview pre :is(.syntax-entity, .syntax-support) { color: var(--code-entity); }
+
 .markdown-preview [data-md-text] {
     white-space: pre-wrap;
 }

@@ -284,6 +284,31 @@ mod tests {
     }
 
     #[test]
+    fn only_offers_code_insertion_with_an_editable_source() {
+        for (has_page, view_mode, can_insert) in [
+            (false, ViewMode::Edit, false),
+            (true, ViewMode::Edit, true),
+            (true, ViewMode::Split, true),
+            (true, ViewMode::Preview, false),
+        ] {
+            let commands = commands::notebook_commands(
+                true,
+                commands::PageActions {
+                    has_page,
+                    view_mode,
+                    ..Default::default()
+                },
+            );
+            assert_eq!(
+                matching_commands(&commands, "insert code block")
+                    .iter()
+                    .any(|command| command.id == commands::INSERT_CODE_BLOCK),
+                can_insert
+            );
+        }
+    }
+
+    #[test]
     fn preview_editing_command_reflects_current_state() {
         use crate::{page_width::PageWidth, theme::Appearance};
 

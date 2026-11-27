@@ -10,6 +10,8 @@ use pulldown_cmark::{CowStr, Event, LinkType, Options, Parser, Tag, TagEnd, html
 use crate::markdown_paths::MarkdownPaths;
 use crate::preview_edit::EditableText;
 
+mod syntax;
+
 pub(crate) const OPTIONS: Options = Options::ENABLE_TABLES
     .union(Options::ENABLE_STRIKETHROUGH)
     .union(Options::ENABLE_TASKLISTS)
@@ -58,10 +60,9 @@ fn render_inner(
     let mut events = Vec::new();
     let mut heading: Option<(usize, String)> = None;
     let mut heading_ids = HashMap::new();
-    let mut in_code = false;
+    let mut code_block = None;
     let mut in_link = false;
     let mut emit_link = false;
-
     let mut depth = 0;
     let mut paragraph = None::<Range<usize>>;
     let mut formats = Vec::new();
@@ -112,12 +113,14 @@ fn render_inner(
                 *id = Some(heading_id(&label, &mut heading_ids).into());
                 event
             }
-            Event::Start(Tag::CodeBlock(_)) => {
-                in_code = true;
+            Event::Start(Tag::CodeBlock(ref kind)) => {
+                code_block = Some((kind.clone(), String::new()));
                 event
             }
             Event::End(TagEnd::CodeBlock) => {
-                in_code = false;
+                if let Some((kind, text)) = code_block.take() {
+                    events.push(syntax::render_code(&kind, text.into()));
+                }
                 event
             }
             Event::Start(Tag::Link {
@@ -168,7 +171,12 @@ fn render_inner(
             Event::FootnoteReference(name) => Event::FootnoteReference(footnote_id(&name).into()),
             Event::InlineHtml(text) if !allowed => Event::Text(text),
             Event::Html(text) => Event::Text(text),
-            Event::Text(text) if !in_code && !in_link => {
+            Event::Text(text) if !in_link => {
+                if let Some((_, code)) = &mut code_block {
+                    // Quoted and listed fences can arrive as several parser events.
+                    code.push_str(&text);
+                    continue;
+                }
                 let edit = editable.as_deref_mut().map(|runs| (range, runs));
                 push_autolinks(
                     &mut events,
@@ -551,6 +559,43 @@ mod tests {
         );
         assert!(html.contains("<a href=\"#top\">https://label.example.org</a>"));
         assert_eq!(html.matches("href=").count(), 4);
+    }
+
+    #[test]
+    fn highlights_tagged_fences_inside_markdown_blocks() {
+        let html = preview(
+            "> ```rust example\n> /* first\n>    second */\n> if ready { let link = \"https://example.org\"; }\n> ```\n\nAfter the quote.",
+        );
+        assert!(html.contains("<blockquote>\n<pre><code class=\"language-rust\">"));
+        for scope in ["syntax-comment", "syntax-keyword", "syntax-string"] {
+            assert!(html.contains(scope), "missing {scope} in {html}");
+        }
+        assert!(html.contains(" first\n   second "), "{html}");
+        assert!(html.contains("</code></pre>\n</blockquote>\n<p>After the quote.</p>"));
+        assert!(!html.contains("<a "));
+    }
+
+    #[test]
+    fn treats_html_in_highlighted_and_plain_fences_as_code() {
+        let html = preview(
+            "```html\n<img src=x onerror=alert(1)>\n```\n\n```xuy-unknown\n<img src=x>\n```\n\n```\n<img src=x>\n```\n\n    <img src=x>\n",
+        );
+        assert!(!html.contains("<img"));
+        assert!(html.contains("<pre><code class=\"language-html\"><span"));
+        assert!(html.contains(
+            "<pre><code class=\"language-xuy-unknown\">&lt;img src=x&gt;\n</code></pre>"
+        ));
+        assert_eq!(
+            html.matches("<pre><code>&lt;img src=x&gt;\n</code></pre>")
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn highlighting_preserves_the_final_line_of_an_unterminated_fence() {
+        let html = preview("```rust\n// final");
+        assert!(html.contains(" final</span>"), "{html}");
     }
 
     #[test]
