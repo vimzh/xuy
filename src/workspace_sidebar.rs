@@ -87,7 +87,7 @@ pub(crate) fn WorkspaceSidebar(
                             entry.path.file_stem()
                         }.unwrap_or(entry.path.as_os_str()).to_string_lossy();
                         let icon = if entry.is_dir {
-                            asset!("/assets/hugeicons/folder-01.svg")
+                            asset!("/assets/hugeicons/notebook-01.svg")
                         } else {
                             asset!("/assets/hugeicons/file-02.svg")
                         };
