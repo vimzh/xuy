@@ -2,15 +2,18 @@
 
 use std::cell::RefCell;
 
+use dioxus::desktop::muda::accelerator::{Accelerator, Code, Modifiers};
 use dioxus::desktop::muda::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 
 pub(crate) const HOME: &str = "xuy-home";
+pub(crate) const TOGGLE_SIDEBAR: &str = "xuy-toggle-sidebar";
 pub(crate) const TOGGLE_PREVIEW: &str = "xuy-toggle-preview";
 pub(crate) const SAVE: &str = "xuy-save";
 
 struct Commands {
     notebook: Submenu,
     home: MenuItem,
+    toggle_sidebar: MenuItem,
     toggle_preview: MenuItem,
     save: MenuItem,
 }
@@ -55,10 +58,20 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
     .expect("build editing menu");
 
     let home = MenuItem::with_id(HOME, "Home", false, None);
+    let toggle_sidebar = MenuItem::with_id(
+        TOGGLE_SIDEBAR,
+        "Toggle Sidebar",
+        false,
+        Some(Accelerator::new(Some(Modifiers::SUPER), Code::KeyB)),
+    );
     let toggle_preview = MenuItem::with_id(TOGGLE_PREVIEW, "Edit Source", false, None);
     let save = MenuItem::with_id(SAVE, "Save", false, None);
-    let notebook = Submenu::with_items("Notebook", false, &[&home, &toggle_preview, &save])
-        .expect("build notebook menu");
+    let notebook = Submenu::with_items(
+        "Notebook",
+        false,
+        &[&home, &toggle_sidebar, &toggle_preview, &save],
+    )
+    .expect("build notebook menu");
     let menu = Menu::with_items(&[&app, &edit, &notebook]).expect("build menu bar");
 
     #[cfg(debug_assertions)]
@@ -88,6 +101,7 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
     COMMANDS.set(Some(Commands {
         notebook,
         home,
+        toggle_sidebar,
         toggle_preview,
         save,
     }));
@@ -99,6 +113,7 @@ pub(crate) fn update(open: bool, has_note: bool, preview: bool, dirty: bool, bus
         if let Some(commands) = commands {
             commands.notebook.set_enabled(open);
             commands.home.set_enabled(open && !busy);
+            commands.toggle_sidebar.set_enabled(open);
             commands.toggle_preview.set_enabled(has_note && !busy);
             commands.toggle_preview.set_text(if preview {
                 "Edit Source"

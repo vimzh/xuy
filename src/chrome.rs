@@ -63,6 +63,7 @@ pub(crate) fn NotebookChrome(
                             aria_label: sidebar_label,
                             aria_expanded: sidebar_open,
                             aria_controls: "workspace-sidebar",
+                            aria_keyshortcuts: "Meta+B",
                             title: sidebar_label,
                             onclick: move |_| on_toggle.call(()),
                             img { src: "{icons}/sidebar-left.svg", alt: "", width: "18", height: "18" }

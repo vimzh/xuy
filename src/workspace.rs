@@ -226,10 +226,12 @@ pub(crate) fn Workspace(
             chrome_hidden.set(false);
         }
     };
+    let mut toggle_sidebar = move |_| sidebar_open.toggle();
     use_muda_event_handler(move |event| match event.id().0.as_str() {
         notebook_menu::HOME => {
             spawn(go_home());
         }
+        notebook_menu::TOGGLE_SIDEBAR => toggle_sidebar(()),
         notebook_menu::TOGGLE_PREVIEW => toggle_preview(()),
         notebook_menu::SAVE => {
             spawn(save(()));
@@ -280,10 +282,7 @@ pub(crate) fn Workspace(
                 folder, parent, busy: busy(),
                 on_parent: move |path| browse(Entry { path, is_dir: true }, None),
                 page_width, preview: preview(), can_preview, on_preview: toggle_preview,
-                on_toggle: move |_| {
-                    let next = !*sidebar_open.peek();
-                    sidebar_open.set(next);
-                },
+                on_toggle: toggle_sidebar,
                 on_back: move |_| move_history(-1),
                 on_forward: move |_| move_history(1),
             }
