@@ -2,8 +2,8 @@
     position: relative;
     display: inline-grid;
     place-items: center;
-    width: 26px;
-    height: 18px;
+    width: 24px;
+    height: 24px;
     border-radius: 4px;
 }
 
@@ -17,7 +17,10 @@
     cursor: pointer;
 }
 
-.dropdown:has(select:enabled:hover),
+.dropdown:where(:has(select:enabled:hover)) {
+    background: var(--hover);
+}
+
 .dropdown[data-active="true"] {
     background: var(--selected);
 }

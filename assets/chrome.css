@@ -1,10 +1,10 @@
 .notebook-chrome {
-    --chrome-top-inset: 9px;
+    --chrome-control-size: clamp(22px, 4.5vw, 24px);
     --chrome-left-inset: 82px;
     --chrome-title-inset: min(clamp(172px, 40vw, 264px), 50%);
     position: relative;
     /* The native traffic lights are centered 16px from the top. */
-    padding-block: var(--chrome-top-inset) 5px;
+    padding-block: max(4px, calc(16px / var(--ui-zoom, 1) - var(--chrome-control-size) / 2));
     font-size: 13px;
     user-select: none;
 }
@@ -19,7 +19,7 @@
     display: grid;
     grid-template: minmax(0, 1fr) / minmax(0, 1fr);
     align-items: center;
-    height: 1em;
+    height: var(--chrome-control-size);
 }
 
 .chrome-drag {
@@ -52,7 +52,7 @@
 .chrome-left {
     position: relative;
     justify-self: start;
-    max-width: calc(var(--chrome-title-inset) - var(--chrome-left-inset) - 5px);
+    max-width: calc(var(--chrome-title-inset) - var(--chrome-left-inset) - 4px);
     margin-inline-start: var(--chrome-left-inset);
     gap: 8px;
 }
@@ -77,17 +77,12 @@
     white-space: nowrap;
 }
 
-.workspace .notebook-chrome .chrome-folder button {
-    width: 16px;
-}
-
 .chrome-filename {
     position: absolute;
-    inset: var(--chrome-top-inset) var(--chrome-title-inset) auto;
+    inset: 0 var(--chrome-title-inset);
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 1em;
     color: var(--ink);
     line-height: 1;
     pointer-events: none;
@@ -120,12 +115,21 @@
     content: "";
 }
 
+.workspace .notebook-chrome button,
+.chrome-right .dropdown {
+    width: var(--chrome-control-size);
+    height: var(--chrome-control-size);
+}
+
+.notebook-chrome :is(button, .dropdown) > img {
+    width: 16px;
+    height: 16px;
+}
+
 .workspace .notebook-chrome button {
     display: grid;
     grid-template-columns: none;
     place-items: center;
-    width: 26px;
-    height: 18px;
     border: 0;
     border-radius: 4px;
     padding: 0;
@@ -165,10 +169,5 @@
 
     .chrome-left {
         gap: 4px;
-    }
-
-    .workspace .notebook-chrome button,
-    .chrome-right .dropdown {
-        width: 22px;
     }
 }
