@@ -1,10 +1,18 @@
 # xuy
 
-xuy is a desktop Markdown notebook for macOS and Linux. Open a local folder, write in plain Markdown, and see the rendered page as you type. Your notes are ordinary files you can open in any text editor.
+**A Rust desktop app built for fast Markdown editing.**
+
+Open a folder on macOS or Linux and start writing. xuy reads notes on demand, renders the preview in the background, and saves directly to the Markdown files you already have.
 
 [Download xuy](https://github.com/vimzh/xuy/releases/latest) · [User guide](docs/usage.md)
 
 ![xuy in Light mode with a notebook sidebar, Markdown source, live preview, and a heading outline](docs/screenshots/workspace.webp)
+
+## How xuy keeps editing responsive
+
+- **Open the folder you need.** xuy lists the current folder and reads each note when you open it.
+- **Keep typing while the preview renders.** Rust renders Markdown on a background worker after a short pause in typing. Autosave waits for one second of idle time before writing to disk.
+- **See what xuy uses on your machine.** On macOS, press `⌘I` to see live CPU usage and memory footprint for the main xuy process. [Performance panel guide](docs/usage.md#check-performance)
 
 ## Install
 
@@ -32,27 +40,7 @@ xuy is a desktop Markdown notebook for macOS and Linux. Open a local folder, wri
 
 The screenshots are from xuy running on macOS with a sample notebook.
 
-## What you can do
-
-- Use relative links and wikilinks to connect notes. Keep images beside a note and render them in Preview.
-- Render tables, task lists, footnotes, and fenced code blocks with syntax highlighting. Choose a code theme and enable **Edit in Preview** to edit formatted text directly.
-- Adjust the writing font, line spacing, and column width. Apply colored highlights that are saved in the Markdown file.
-- Find notebook actions and settings in the command bar. Search for **Writing Font**, **Line Spacing**, or **Code Block Theme** to change them while writing.
-- Open a terminal in the current notebook folder. xuy reloads clean notes when another program changes them and lets you save a copy of your draft if edits conflict.
-
-### macOS shortcuts
-
-| Shortcut | Action |
-| --- | --- |
-| `⌘K` | Open the command bar |
-| `⌘O` | Open a folder |
-| `⌘P` | Open saved notebooks |
-| `⌘N` | Create a note |
-| `⌘S` | Save the current note |
-| `⇧⌘P` | Switch between Edit and Preview |
-| `⌘,` | Open Settings |
-
-See the [full user guide](docs/usage.md) for more shortcuts and details on notebook management, preview, and external edits. It’s also available offline from **docs** on Home.
+Press `⌘K` on macOS to find commands and settings while you write. The full guide covers shortcuts, the terminal, and editing the same files from other tools. It’s available offline from **docs** on Home. [User guide](docs/usage.md)
 
 ## Develop
 
