@@ -24,6 +24,10 @@ fn App() -> Element {
     rsx! {
         document::Stylesheet { href: asset!("/assets/app.css") }
         main {
+            pre { class: "black-hole", aria_hidden: true,
+                "data-license": asset!("/assets/ascii-rest/LICENSE.txt"),
+                {include_str!("../assets/ascii-rest/black-hole.txt")}
+            }
             h1 { "xuy" }
             nav { aria_label: "Notebook actions",
                 for (label, shortcut, icon) in actions {

@@ -17,13 +17,23 @@ body {
 }
 
 #main {
-    width: min(100%, 16rem);
+    width: min(100%, 24rem);
+}
+
+.black-hole {
+    width: 64ch;
+    margin: 0 auto 12px;
+    font-family: inherit;
+    /* Allow space for all 64 columns at Menlo's character width. */
+    font-size: min(9px, calc((100vw - 48px) / 40));
+    line-height: 1.2;
+    text-align: left;
 }
 
 h1 {
     margin: 0 0 20px;
     font-size: 56px;
-    font-weight: 600;
+    font-weight: 400;
     line-height: 1;
     letter-spacing: -.05em;
 }
@@ -31,6 +41,8 @@ h1 {
 nav {
     display: grid;
     gap: 6px;
+    width: min(100%, 16rem);
+    margin-inline: auto;
 }
 
 button {
