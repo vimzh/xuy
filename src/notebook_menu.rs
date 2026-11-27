@@ -12,25 +12,27 @@ use crate::editor::ViewMode;
 
 pub(crate) const HOME: &str = "xuy-home";
 pub(crate) const COMMAND_BAR: &str = "xuy-command-bar";
+pub(crate) const SETTINGS: &str = "xuy-settings";
+pub(crate) const TOGGLE_PERFORMANCE: &str = "xuy-toggle-performance";
 pub(crate) const TOGGLE_SIDEBAR: &str = "xuy-toggle-sidebar";
 pub(crate) const TOGGLE_PREVIEW: &str = "xuy-toggle-preview";
 pub(crate) const TOGGLE_SPLIT: &str = "xuy-toggle-split";
 pub(crate) const TOGGLE_PREVIEW_EDITING: &str = "xuy-toggle-preview-editing";
 pub(crate) const PREVIEW_SHORTCUT: &str = "⇧⌘P";
 pub(crate) const SAVE: &str = "xuy-save";
-
 pub(crate) const NEW_NOTE: &str = "xuy-new-note";
 pub(crate) const NEW_FOLDER: &str = "xuy-new-folder";
 pub(crate) const NEW_NOTEBOOK: &str = "xuy-new-notebook";
 pub(crate) const OPEN_FOLDER: &str = "xuy-open-folder";
 pub(crate) const NOTEBOOKS: &str = "xuy-notebooks";
+pub(crate) const DOCS: &str = "xuy-docs";
 
 #[cfg(target_os = "macos")]
 const PREVIEW_EDITING_KEY: &str = "xuy.edit-in-preview";
 
 struct Commands {
-    new_note: MenuItem,
     new_folder: MenuItem,
+    new_note: MenuItem,
     home: MenuItem,
     toggle_sidebar: MenuItem,
     toggle_preview: MenuItem,
@@ -54,6 +56,20 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
                 true,
                 Some(Accelerator::new(Some(Modifiers::SUPER), Code::KeyK)),
             ),
+            &MenuItem::with_id(
+                SETTINGS,
+                "Settings…",
+                true,
+                Some(Accelerator::new(Some(Modifiers::SUPER), Code::Comma)),
+            ),
+            &CheckMenuItem::with_id(
+                TOGGLE_PERFORMANCE,
+                "Performance Panel",
+                true,
+                false,
+                Some(Accelerator::new(Some(Modifiers::SUPER), Code::KeyI)),
+            ),
+            &PredefinedMenuItem::separator(),
             &crate::theme::menu(appearance),
             &PredefinedMenuItem::fullscreen(None),
             &PredefinedMenuItem::separator(),
@@ -137,6 +153,7 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
         Code::KeyO,
     );
     let notebooks = command(NOTEBOOKS, "Notebooks…", true, Modifiers::SUPER, Code::KeyP);
+    let docs = command(DOCS, "Using xuy", true, Modifiers::SUPER, Code::KeyD);
     let save = command(SAVE, "Save", false, Modifiers::SUPER, Code::KeyS);
     let notebook = Submenu::with_items(
         "Notebook",
@@ -154,6 +171,8 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
             &toggle_split,
             &edit_in_preview,
             &save,
+            &PredefinedMenuItem::separator(),
+            &docs,
         ],
     )
     .expect("build notebook menu");
@@ -184,8 +203,8 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
     }
 
     COMMANDS.set(Some(Commands {
-        new_note,
         new_folder,
+        new_note,
         home,
         toggle_sidebar,
         toggle_preview,
@@ -220,8 +239,8 @@ pub(crate) fn set_preview_editing(enabled: bool) {
 pub(crate) fn update(open: bool, can_view: bool, view_mode: ViewMode, dirty: bool, busy: bool) {
     COMMANDS.with_borrow(|commands| {
         if let Some(commands) = commands {
-            commands.new_note.set_enabled(!busy);
             commands.new_folder.set_enabled(open && !busy);
+            commands.new_note.set_enabled(!busy);
             commands.home.set_enabled(open && !busy);
             commands.toggle_sidebar.set_enabled(open);
             commands.toggle_preview.set_enabled(can_view);

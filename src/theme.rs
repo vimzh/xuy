@@ -4,10 +4,12 @@ use std::cell::RefCell;
 
 use dioxus::desktop::{
     muda::{CheckMenuItem, IsMenuItem, Submenu},
-    tao::window::Theme,
-    use_muda_event_handler, use_window,
+    tao::{
+        event::{Event, WindowEvent},
+        window::Theme,
+    },
+    use_muda_event_handler, use_window, use_wry_event_handler,
 };
-
 use dioxus::prelude::*;
 
 #[cfg(target_os = "macos")]
@@ -84,9 +86,22 @@ pub(crate) fn menu(initial: Appearance) -> Submenu {
     submenu
 }
 
-pub(crate) fn use_appearance() -> Signal<Appearance> {
+pub(crate) fn use_appearance() -> (Signal<Appearance>, Signal<bool>) {
     let window = use_window();
     let mut selected = use_signal(Appearance::load);
+    let mut dark = use_signal(|| window.theme() == Theme::Dark);
+    let window_id = window.id();
+    use_wry_event_handler(move |event, _| {
+        if let Event::WindowEvent {
+            window_id: source,
+            event: WindowEvent::ThemeChanged(theme),
+            ..
+        } = event
+            && *source == window_id
+        {
+            dark.set(*theme == Theme::Dark);
+        }
+    });
     use_muda_event_handler(move |event| {
         if let Some(appearance) = appearance_for_id(&event.id().0) {
             selected.set(appearance);
@@ -95,6 +110,7 @@ pub(crate) fn use_appearance() -> Signal<Appearance> {
     use_effect(move || {
         let appearance = selected();
         window.set_theme(appearance.native());
+        dark.set(window.theme() == Theme::Dark);
         #[cfg(target_os = "macos")]
         appearance.save();
         ITEMS.with_borrow(|items| {
@@ -105,12 +121,31 @@ pub(crate) fn use_appearance() -> Signal<Appearance> {
             }
         });
     });
-
-    selected
+    (selected, dark)
 }
 
 pub(crate) fn appearance_for_id(id: &str) -> Option<Appearance> {
     OPTIONS
         .iter()
         .find_map(|(appearance, option_id, _)| (*option_id == id).then_some(*appearance))
+}
+
+#[component]
+pub(crate) fn ThemeSelect(mut appearance: Signal<Appearance>) -> Element {
+    let selected = appearance();
+    rsx! {
+        label {
+            span { "Theme" }
+            select {
+                onchange: move |event| {
+                    if let Some(option) = appearance_for_id(&event.value()) {
+                        appearance.set(option);
+                    }
+                },
+                for (option, id, label) in OPTIONS {
+                    option { value: id, selected: option == selected, "{label}" }
+                }
+            }
+        }
+    }
 }

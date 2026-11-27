@@ -1,0 +1,155 @@
+.workspace-content {
+    container-type: inline-size;
+}
+
+.note-writing {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(10rem, 20cqw, 12rem);
+    grid-template-areas: "editor tools";
+    gap: clamp(10px, 3cqw, 28px);
+    flex: 1;
+    min-height: 0;
+}
+
+.note-editor {
+    grid-area: editor;
+    justify-self: center;
+}
+
+.writing-sidebar {
+    grid-area: tools;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.writing-modes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.writing-tools-view {
+    min-height: 0;
+    padding: 2px;
+    overflow: auto;
+}
+
+.workspace .writing-sidebar button {
+    border: 0;
+    font-size: inherit;
+    line-height: 1.4;
+}
+
+.workspace .writing-modes button {
+    padding-inline: 5px;
+}
+
+.writing-modes button[aria-pressed="true"] {
+    background: var(--selected);
+}
+
+.writing-sidebar button:focus-visible {
+    outline: 1px solid var(--focus);
+    outline-offset: -1px;
+}
+
+.writing-hint {
+    margin: 2px 8px 6px;
+    color: var(--muted);
+}
+
+.note-outline {
+    display: grid;
+    gap: 2px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.note-outline li {
+    margin-inline-start: calc(var(--heading-depth) * 8px);
+}
+
+.note-outline [data-child="true"] {
+    border-inline-start: 1px solid var(--control-border);
+    padding-inline-start: 3px;
+}
+
+.workspace .note-outline button {
+    width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.highlight-colors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+}
+
+.highlight-swatch {
+    display: inline-block;
+    width: .75em;
+    height: .75em;
+    margin-inline-end: .5em;
+    border: 1px solid var(--control-border);
+    border-radius: 50%;
+}
+
+.workspace .highlight-clear {
+    margin-block-start: 4px;
+}
+
+.note-highlight-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.note-highlight-marks {
+    position: absolute;
+    inset: 0 auto auto 0;
+}
+
+.note-highlight-marks > span {
+    position: absolute;
+}
+
+.markdown-preview mark {
+    color: inherit;
+}
+
+.xuy-yellow   { background-color: #f7e49a; }
+.xuy-mint     { background-color: #bce6cc; }
+.xuy-sky      { background-color: #c5dcf5; }
+.xuy-rose     { background-color: #f3c8d2; }
+.xuy-lavender { background-color: #ddd0f4; }
+
+@media (prefers-color-scheme: dark) {
+    .xuy-yellow   { background-color: #574718; }
+    .xuy-mint     { background-color: #24503d; }
+    .xuy-sky      { background-color: #254962; }
+    .xuy-rose     { background-color: #603646; }
+    .xuy-lavender { background-color: #4a3d65; }
+}
+
+@container (max-width: 560px) {
+    .note-writing {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-areas: "tools" "editor";
+        gap: 8px;
+    }
+
+    .writing-sidebar {
+        gap: 2px;
+    }
+
+    .writing-tools-view {
+        max-height: min(19dvh, 8rem);
+    }
+}

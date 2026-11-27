@@ -1,5 +1,6 @@
 //! Available command bar actions and their current settings.
 
+use crate::terminal::{self, State};
 use crate::{
     command_bar::Command, editor::ViewMode, notebook_menu, page_width::PageWidth, theme::Appearance,
 };
@@ -10,6 +11,37 @@ pub(crate) const INSERT_CODE_BLOCK: &str = "insert-code-block";
 pub(crate) const ZOOM_IN: &str = "zoom-in";
 pub(crate) const ZOOM_OUT: &str = "zoom-out";
 pub(crate) const RESET_ZOOM: &str = "reset-zoom";
+
+pub(crate) fn terminal_commands(state: State) -> Vec<Command> {
+    let mut commands = Vec::new();
+    if state != State::Visible {
+        commands.push(Command::new(
+            terminal::OPEN,
+            "Open Terminal",
+            "add-01",
+            "",
+            "shell show restore",
+        ));
+    } else {
+        commands.push(Command::new(
+            terminal::MINIMIZE,
+            "Minimize Terminal",
+            "remove-01",
+            "",
+            "shell hide",
+        ));
+    }
+    if state != State::Closed {
+        commands.push(Command::new(
+            terminal::CLOSE,
+            "Close Terminal",
+            "cancel-01",
+            "",
+            "shell quit end",
+        ));
+    }
+    commands
+}
 
 const WIDTHS: [(PageWidth, &str, &str); 3] = [
     (PageWidth::Narrow, "width-narrow", "Narrow Writing Width"),

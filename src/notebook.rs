@@ -96,6 +96,39 @@ pub(crate) fn note_modified(root: &Path, path: &Path) -> io::Result<SystemTime> 
         .map_err(|err| at(err, "Read modified date of", path))
 }
 
+pub(crate) fn save_draft_copy(root: &Path, note: &Path, text: &str) -> io::Result<PathBuf> {
+    let folder = note
+        .parent()
+        .ok_or_else(|| io::Error::other("The note has no folder"))?;
+    check_folder(root, folder)?;
+    let mut pending = tempfile::Builder::new()
+        .prefix(".xuy-draft-")
+        .tempfile_in(folder)?;
+    pending.write_all(text.as_bytes())?;
+    pending.as_file().sync_all()?;
+    let suffix = pending
+        .path()
+        .file_name()
+        .and_then(OsStr::to_str)
+        .and_then(|name| name.strip_prefix(".xuy-draft-"))
+        .ok_or_else(|| io::Error::other("Could not name draft copy"))?;
+    let stem = note
+        .file_stem()
+        .unwrap_or(note.as_os_str())
+        .to_string_lossy();
+    // Limit the prefix so a valid source filename still leaves room for the copy suffix.
+    let stem = stem
+        .char_indices()
+        .take_while(|(byte, ch)| byte + ch.len_utf8() <= 190)
+        .last()
+        .map_or("Note", |(byte, ch)| &stem[..byte + ch.len_utf8()]);
+    let path = folder.join(format!("{stem} (xuy draft {suffix}).md"));
+    pending
+        .persist_noclobber(&path)
+        .map_err(|error| at(error.error, "Save draft as copy", &path))?;
+    Ok(path)
+}
+
 pub(crate) fn save(root: &Path, path: &Path, original: &str, text: &str) -> io::Result<()> {
     let (folder, metadata) = check_note(root, path)?;
     let permissions = metadata.permissions();
@@ -155,7 +188,7 @@ fn check_folder(root: &Path, folder: &Path) -> io::Result<()> {
     Ok(())
 }
 
-fn check_note<'a>(root: &Path, path: &'a Path) -> io::Result<(&'a Path, fs::Metadata)> {
+pub(crate) fn check_note<'a>(root: &Path, path: &'a Path) -> io::Result<(&'a Path, fs::Metadata)> {
     let invalid_note = || {
         io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -327,6 +360,24 @@ mod tests {
         assert!(err.to_string().contains("changed on disk"));
         assert_eq!(read(&root, &note)?, "outside change");
         assert_eq!(fs::read_dir(&root)?.count(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn draft_copy_preserves_original_and_allocates_a_new_path_each_time() -> io::Result<()> {
+        let temp = tempfile::tempdir()?;
+        let (root, _) = open_root(temp.path())?;
+        let note = create(&root, &root, "Page")?;
+        fs::write(&note, "external")?;
+        let first = save_draft_copy(&root, &note, "draft one")?;
+        let second = save_draft_copy(&root, &note, "draft two")?;
+        assert_ne!(first, second);
+        assert_eq!(read(&root, &note)?, "external");
+        assert_eq!(read(&root, &first)?, "draft one");
+        assert_eq!(read(&root, &second)?, "draft two");
+        assert!(
+            save_draft_copy(&root, &root.parent().unwrap().join("outside.md"), "copy").is_err()
+        );
         Ok(())
     }
 

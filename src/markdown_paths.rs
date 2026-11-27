@@ -102,31 +102,22 @@ impl MarkdownPaths {
             // Keep path replacements from redirecting the read or blocking on a FIFO.
             options.custom_flags(libc::O_NOFOLLOW_ANY | libc::O_NONBLOCK);
         }
-        let file = options.open(path).ok()?;
-        let metadata = file.metadata().ok()?;
-        if !metadata.is_file() || metadata.len() > MAX_IMAGE_BYTES {
-            return None;
-        }
-        let mut image = file.take(MAX_IMAGE_BYTES + 1);
-        let mut bytes = Vec::with_capacity(12);
-        image.by_ref().take(12).read_to_end(&mut bytes).ok()?;
-        let mime = match bytes.as_slice() {
-            [0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n', ..] => "image/png",
-            [0xff, 0xd8, 0xff, ..] => "image/jpeg",
-            [b'G', b'I', b'F', b'8', b'7' | b'9', b'a', ..] => "image/gif",
-            header if header.starts_with(b"RIFF") && header.get(8..12) == Some(b"WEBP") => {
-                "image/webp"
-            }
-            _ => return None,
-        };
-        bytes.reserve((metadata.len() as usize).saturating_sub(bytes.len()));
-        image.read_to_end(&mut bytes).ok()?;
-        if bytes.len() as u64 > MAX_IMAGE_BYTES {
-            return None;
-        }
+        let (kind, bytes) = read_image(options.open(path).ok()?).ok()?;
+        let mime = kind.mime();
         let mut source = format!("data:{mime};base64,");
         STANDARD.encode_string(bytes, &mut source);
         Some(source)
+    }
+
+    pub(crate) fn attachment_folder(&self) -> io::Result<&Path> {
+        let (folder, metadata) = crate::notebook::check_note(&self.root, &self.note)?;
+        if metadata.permissions().readonly() {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "The note is read-only",
+            ));
+        }
+        Ok(folder)
     }
 
     fn relative_file(&self, relative: &Path) -> io::Result<PathBuf> {
@@ -172,6 +163,63 @@ impl MarkdownPaths {
         }
         Ok(folder.join(name))
     }
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum ImageKind {
+    Png,
+    Jpeg,
+    Gif,
+    Webp,
+}
+
+impl ImageKind {
+    pub(crate) fn extension(self) -> &'static str {
+        match self {
+            Self::Png => ".png",
+            Self::Jpeg => ".jpg",
+            Self::Gif => ".gif",
+            Self::Webp => ".webp",
+        }
+    }
+
+    fn mime(self) -> &'static str {
+        match self {
+            Self::Png => "image/png",
+            Self::Jpeg => "image/jpeg",
+            Self::Gif => "image/gif",
+            Self::Webp => "image/webp",
+        }
+    }
+}
+
+pub(crate) fn read_image(file: fs::File) -> io::Result<(ImageKind, Vec<u8>)> {
+    let metadata = file.metadata()?;
+    if !metadata.is_file() {
+        return Err(invalid("Choose an image file"));
+    }
+    let too_large = || invalid("Images must be 12 MiB or smaller");
+    if metadata.len() > MAX_IMAGE_BYTES {
+        return Err(too_large());
+    }
+    let mut image = file.take(MAX_IMAGE_BYTES + 1);
+    let mut bytes = Vec::with_capacity(12);
+    image.by_ref().take(12).read_to_end(&mut bytes)?;
+    let kind = match bytes.as_slice() {
+        [0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n', ..] => ImageKind::Png,
+        [0xff, 0xd8, 0xff, ..] => ImageKind::Jpeg,
+        [b'G', b'I', b'F', b'8', b'7' | b'9', b'a', ..] => ImageKind::Gif,
+        header if header.starts_with(b"RIFF") && header.get(8..12) == Some(b"WEBP") => {
+            ImageKind::Webp
+        }
+        _ => return Err(invalid("Use a PNG, JPEG, GIF, or WebP image")),
+    };
+    bytes.reserve((metadata.len() as usize).saturating_sub(bytes.len()));
+    image.read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > MAX_IMAGE_BYTES {
+        return Err(too_large());
+    }
+    Ok((kind, bytes))
 }
 
 fn decode(value: &str) -> io::Result<Cow<'_, str>> {

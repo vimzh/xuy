@@ -12,14 +12,19 @@ use tokio::{
 
 use crate::chrome::NotebookChrome;
 use crate::commands::{self, PageActions};
+use crate::cursor::CursorOptions;
 use crate::editor::{Editor, ViewMode};
+use crate::external_edit::{self, Conflict, ExternalEditNotice, Revision};
 use crate::markdown_paths::MarkdownPaths;
 use crate::markdown_preview::PreviewTarget;
 use crate::note_history::NoteHistory;
+use crate::note_status::{NoteStatusBar, NoteSummary};
 use crate::notebook::{self, Entry};
 use crate::notebook_index::{NoteTime, use_folder_index};
 use crate::notebook_menu;
 use crate::page_width::PageWidth;
+use crate::performance::PerformancePanel;
+use crate::terminal::{self, TerminalPanel};
 use crate::workspace_session;
 use crate::workspace_sidebar::{SidebarDivider, WorkspaceSidebar};
 use crate::writing_style::WritingStyle;
@@ -39,13 +44,17 @@ pub(crate) fn Workspace(
     opened: OpenNotebook,
     page_width: Signal<PageWidth>,
     edit_in_preview: bool,
+    cursor: Signal<Option<CursorOptions>>,
+    show_performance: bool,
     zoom: f64,
+    markdown_font: u8,
     writing_style: WritingStyle,
     mut busy: Signal<bool>,
     mut error: Signal<Option<String>>,
     mut pending: Signal<Option<OpenNotebook>>,
     mut palette_command: Signal<Option<&'static str>>,
     mut page_actions: Signal<PageActions>,
+    mut terminal_state: Signal<terminal::State>,
     modal_open: Memo<bool>,
     on_switch: EventHandler<OpenNotebook>,
     on_home: EventHandler<()>,
@@ -58,6 +67,7 @@ pub(crate) fn Workspace(
     let mut saved = use_signal(|| draft.peek().clone());
     let mut last_edit = use_signal(|| None::<Instant>);
     let mut failed_edit = use_signal(|| None::<Instant>);
+    let mut conflict = use_signal(|| None::<Conflict>);
     let mut saving = use_signal(|| false);
     let mut view_mode = use_signal(ViewMode::default);
     let mut preview_anchor = use_signal(|| None::<String>);
@@ -74,6 +84,79 @@ pub(crate) fn Workspace(
     let mut name = use_signal(String::new);
     let confirmation = use_signal(|| None::<oneshot::Sender<bool>>);
     let dirty = use_memo(move || *draft.read() != *saved.read());
+    let (disk_revision, watch_error) = external_edit::use_folder_watch(directory, selected);
+    let mut indexed_revision = use_signal(|| None);
+    let mut disk_error = use_signal(|| None::<String>);
+    use_resource(move || {
+        let folder = directory();
+        let note = selected();
+        let revision = disk_revision();
+        let available = !busy();
+        async move {
+            if !available {
+                return;
+            }
+            let root = root.peek().clone();
+            let read_folder = folder.clone();
+            let read_note = note.clone();
+            let refresh_index =
+                indexed_revision.peek().as_ref() != Some(&(folder.clone(), revision));
+            let result = on_disk(move || {
+                let entries = refresh_index.then(|| notebook::list(&root, &read_folder));
+                let disk = read_note
+                    .as_ref()
+                    .map(|path| notebook::read(&root, path).map_err(|error| error.to_string()));
+                Ok((entries, disk))
+            })
+            .await;
+            if *busy.peek()
+                || *disk_revision.peek() != revision
+                || *directory.peek() != folder
+                || *selected.peek() != note
+            {
+                return;
+            }
+            match result {
+                Ok((entries, disk)) => {
+                    match entries {
+                        Some(Ok(entries)) => {
+                            index.replace(entries);
+                            indexed_revision.set(Some((folder, revision)));
+                            disk_error.set(None);
+                        }
+                        Some(Err(failure)) => disk_error.set(Some(failure.to_string())),
+                        None => {}
+                    }
+                    if let Some(disk) = disk {
+                        let update = external_edit::reconcile(&saved.peek(), &draft.peek(), disk);
+                        match update {
+                            Revision::Unchanged => {
+                                if conflict.peek().is_some() {
+                                    conflict.set(None);
+                                    failed_edit.set(None);
+                                }
+                            }
+                            Revision::Reload(text) => {
+                                saved.set(text.clone());
+                                if *draft.peek() != text {
+                                    draft.set(text);
+                                }
+                                last_edit.set(None);
+                                failed_edit.set(None);
+                                conflict.set(None);
+                            }
+                            Revision::Conflict(next) => {
+                                if conflict.peek().as_ref() != Some(&next) {
+                                    conflict.set(Some(next));
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(failure) => disk_error.set(Some(failure.to_string())),
+            }
+        }
+    });
     // Keep unavailable paths until the user opens a new location.
     let mut remember_location = use_signal(|| !opened.restored);
     use_effect(move || {
@@ -82,6 +165,13 @@ pub(crate) fn Workspace(
                 workspace_session::save(&root.peek(), &directory.read(), selected.read().as_deref())
         {
             error.set(Some(failure.to_string()));
+        }
+    });
+    let summary = use_memo(move || {
+        if selected.read().is_some() {
+            NoteSummary::parse(&draft.read())
+        } else {
+            NoteSummary::default()
         }
     });
 
@@ -132,6 +222,9 @@ pub(crate) fn Workspace(
                     }
                     saved.set(text.clone());
                     draft.set(text);
+                    conflict.set(None);
+                    last_edit.set(None);
+                    failed_edit.set(None);
                     if let Some(index) = history_index {
                         history.write().arrive(index);
                     } else {
@@ -245,6 +338,9 @@ pub(crate) fn Workspace(
                         if let Some(path) = note {
                             saved.set(String::new());
                             draft.set(String::new());
+                            conflict.set(None);
+                            last_edit.set(None);
+                            failed_edit.set(None);
                             history.write().visit(&path);
                             selected.set(Some(path));
                             remember_location.set(true);
@@ -264,6 +360,7 @@ pub(crate) fn Workspace(
     let save = move |expected_edit: Option<Instant>| async move {
         let edited = *last_edit.peek();
         if *busy.peek()
+            || conflict.peek().is_some()
             || *modal_open.peek()
             || pending.peek().is_some()
             || *draft.peek() == *saved.peek()
@@ -284,20 +381,30 @@ pub(crate) fn Workspace(
         let text = draft.peek().clone();
         let listed = path.parent() == Some(directory.peek().as_path());
         let result = on_disk(move || {
-            notebook::save(&root, &path, &original, &text)?;
+            if let Err(failure) = notebook::save(&root, &path, &original, &text) {
+                let observed = notebook::read(&root, &path).map_err(|error| error.to_string());
+                return Ok(Err((failure, observed)));
+            }
             let updated = listed.then(|| {
                 let time = NoteTime::read(&root, &path);
                 (path, time)
             });
-            Ok((text, updated))
+            Ok(Ok((text, updated)))
         })
         .await;
         match result {
-            Ok((text, updated)) => {
+            Ok(Ok((text, updated))) => {
                 saved.set(text);
                 failed_edit.set(None);
                 if let Some((path, time)) = updated {
                     index.note_saved(path, time);
+                }
+            }
+            Ok(Err((failure, observed))) => {
+                failed_edit.set(edited);
+                match external_edit::reconcile(&saved.peek(), &draft.peek(), observed) {
+                    Revision::Conflict(next) => conflict.set(Some(next)),
+                    _ => error.set(Some(failure.to_string())),
                 }
             }
             Err(failure) => {
@@ -312,6 +419,7 @@ pub(crate) fn Workspace(
         let Some(edited) = last_edit() else { return };
         if busy()
             || !dirty()
+            || conflict.read().is_some()
             || failed_edit() == Some(edited)
             || modal_open()
             || pending.read().is_some()
@@ -322,6 +430,71 @@ pub(crate) fn Workspace(
         // Cancel superseded timers without interrupting a write already in progress.
         spawn(save(Some(edited)));
     });
+
+    let reload_external = move |_| async move {
+        if *busy.peek() || !matches!(conflict.peek().as_ref(), Some(Conflict::Changed(_))) {
+            return;
+        }
+        let Some(path) = selected.peek().clone() else {
+            return;
+        };
+        busy.set(true);
+        let root = root.peek().clone();
+        match on_disk(move || notebook::read(&root, &path)).await {
+            Ok(text) => {
+                saved.set(text.clone());
+                draft.set(text);
+                last_edit.set(None);
+                failed_edit.set(None);
+                conflict.set(None);
+                error.set(None);
+            }
+            Err(failure) => conflict.set(Some(Conflict::Unavailable(failure.to_string()))),
+        }
+        busy.set(false);
+    };
+    let save_external_copy = move |_| async move {
+        if *busy.peek() || conflict.peek().is_none() {
+            return;
+        }
+        let Some(path) = selected.peek().clone() else {
+            return;
+        };
+        busy.set(true);
+        let root = root.peek().clone();
+        let text = draft.peek().clone();
+        match on_disk(move || {
+            let copy = notebook::save_draft_copy(&root, &path, &text)?;
+            let folder = copy.parent().expect("draft copy has a folder").to_owned();
+            let entries = notebook::list(&root, &folder);
+            Ok((copy, folder, entries, text))
+        })
+        .await
+        {
+            Ok((copy, folder, entries, text)) => {
+                match entries {
+                    Ok(entries) => {
+                        index.replace(entries);
+                        directory.set(folder);
+                        error.set(None);
+                    }
+                    Err(failure) => error.set(Some(format!(
+                        "Draft saved to {}. {failure}",
+                        copy.display()
+                    ))),
+                }
+                history.write().visit(&copy);
+                remember_location.set(true);
+                selected.set(Some(copy));
+                saved.set(text);
+                last_edit.set(None);
+                failed_edit.set(None);
+                conflict.set(None);
+            }
+            Err(failure) => error.set(Some(failure.to_string())),
+        }
+        busy.set(false);
+    };
 
     let leave = move || async move {
         if *busy.peek() {
@@ -421,7 +594,7 @@ pub(crate) fn Workspace(
         let actions = PageActions {
             has_page: selected.read().is_some(),
             view_mode: view_mode(),
-            dirty: dirty(),
+            dirty: dirty() && conflict.read().is_none(),
             can_back: history.destination(-1).is_some(),
             can_forward: history.destination(1).is_some(),
         };
@@ -458,11 +631,12 @@ pub(crate) fn Workspace(
 
     rsx! {
         document::Stylesheet { href: asset!("/assets/workspace.css") }
+        document::Stylesheet { href: asset!("/assets/terminal.css") }
         main {
             class: "workspace",
             "data-sidebar-open": sidebar_open(),
             "data-code-theme": writing_style.code_theme(),
-            style: "--editor-page-width: {columns}ch; --writing-font: {font_family}; --writing-code-font: {code_font}; --writing-line-height: {line_height}; --ui-zoom: {zoom}",
+            style: "--editor-page-width: {columns}ch; --markdown-font-size: {markdown_font}px; --writing-font: {font_family}; --writing-code-font: {code_font}; --writing-line-height: {line_height}; --ui-zoom: {zoom}",
             aria_busy: busy() && confirmation.read().is_none(),
             onkeydown: move |event| {
                 if event.key() == Key::Escape && !event.is_composing() {
@@ -477,13 +651,16 @@ pub(crate) fn Workspace(
                 }
             },
             NotebookChrome {
-                filename, dirty: dirty(), hidden: chrome_hidden, sidebar_open: sidebar_open(), can_back, can_forward,
+                filename: filename.clone(), dirty: dirty(), hidden: chrome_hidden, sidebar_open: sidebar_open(), can_back, can_forward,
                 folder, parent, busy: busy(),
                 on_parent: move |path| browse(Entry { path, is_dir: true }, None, ViewMode::Edit),
                 page_width, view_mode: view_mode(), can_preview, on_view_mode: change_view,
                 on_toggle: toggle_sidebar,
                 on_back: move |_| move_history(-1),
                 on_forward: move |_| move_history(1),
+            }
+            if show_performance {
+                PerformancePanel {}
             }
             div { class: "workspace-body",
                 div { id: "workspace-sidebar", class: "workspace-sidebar", "inert": (!sidebar_open()).then_some(""),
@@ -500,6 +677,15 @@ pub(crate) fn Workspace(
                 div { class: "workspace-content",
                     if let Some(message) = error() {
                         p { class: "workspace-error", role: "alert", "{message}" }
+                    }
+                    if let Some(message) = watch_error() {
+                        p { class: "workspace-error", role: "status", "{message}" }
+                    }
+                    if let Some(message) = disk_error() {
+                        p { class: "workspace-error", role: "status", "{message}" }
+                    }
+                    if let Some(current) = conflict() {
+                        ExternalEditNotice { conflict: current, busy: busy(), on_reload: reload_external, on_save_copy: save_external_copy }
                     }
                     if confirmation.read().is_some() {
                         div { class: "unsaved-choice",
@@ -531,7 +717,7 @@ pub(crate) fn Workspace(
                     }
                     if let Some(path) = selected() {
                         Editor { key: "{path:?}",
-                            draft, dirty, view_mode, edit_in_preview, chrome_hidden, busy: (busy() && !saving()) || modal_open(),
+                            draft, dirty, view_mode, edit_in_preview, chrome_hidden, busy: (busy() && !saving()) || modal_open(), summary,
                             paths: MarkdownPaths::new(root.peek().clone(), path), preview_anchor,
                             on_preview_open: open_preview_link,
                             on_edit: move |text| {
@@ -539,11 +725,24 @@ pub(crate) fn Workspace(
                                 last_edit.set(Some(Instant::now()));
                             },
                             on_save: move |_| save(None),
+                            cursor: cursor().unwrap_or_default(),
                         }
                     } else if naming().is_none() {
                         p { class: "workspace-message", "Select a Markdown note." }
                     }
                 }
+            }
+            if let Some(path) = selected() {
+                NoteStatusBar { key: "{path:?}", filename, summary }
+            }
+            if terminal_state() != terminal::State::Visible {
+                div { class: "terminal-launcher",
+                    button { r#type: "button", aria_controls: (terminal_state() == terminal::State::Minimized).then_some("terminal-panel"), aria_expanded: false,
+                        onclick: move |_| terminal_state.set(terminal::State::Visible), "Terminal" }
+                }
+            }
+            if terminal_state() != terminal::State::Closed {
+                TerminalPanel { state: terminal_state, folder: directory(), zoom }
             }
         }
     }

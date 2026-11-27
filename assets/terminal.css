@@ -1,0 +1,81 @@
+.workspace {
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+
+.terminal-launcher,
+.terminal-panel {
+    grid-row: 4;
+    border-top: 1px solid var(--workspace-rule);
+}
+
+.terminal-launcher {
+    padding-inline: 8px;
+}
+
+.terminal-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: clamp(92px, 31dvh, 24rem);
+    min-width: 0;
+}
+
+.terminal-panel[hidden] {
+    display: none;
+}
+
+.terminal-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 3px 8px;
+    font-size: 12px;
+}
+
+.terminal-header > button:first-of-type {
+    margin-inline-start: auto;
+}
+
+.terminal-status {
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.workspace :is(.terminal-launcher, .terminal-header) button {
+    border: 0;
+    font-size: 12px;
+}
+
+.terminal-screen {
+    background: var(--sidebar-surface);
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.terminal-screen .xterm {
+    height: 100%;
+}
+
+.external-edit {
+    margin-block-end: 10px;
+    font-size: 13px;
+}
+
+.external-edit p,
+.external-edit details {
+    margin: 0 0 6px;
+}
+
+.external-edit button + button {
+    margin-inline-start: 8px;
+}
+
+.external-edit pre {
+    max-height: 18dvh;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

@@ -301,19 +301,26 @@ mod tests {
 
     #[test]
     fn finds_writing_settings_by_name_and_value() {
-        use crate::writing_style::WritingStyle;
+        use crate::{font_size::FontPreference, writing_style::WritingStyle};
 
-        let settings: Vec<_> = crate::writing_style::style_commands(WritingStyle::load()).collect();
+        let mut settings: Vec<_> =
+            crate::writing_style::style_commands(WritingStyle::load()).collect();
+        settings.extend(FontPreference::Settings.commands(15));
+        settings.extend(FontPreference::Markdown.commands(18));
 
         for (query, id) in [
             ("writing font jetbrains", "font-jetbrains"),
             ("relaxed line height", "spacing-relaxed"),
             ("code theme graphite", "code-theme-graphite"),
+            ("settings font size 15", "settings-font-15"),
+            ("markdown font size 18", "markdown-font-18"),
         ] {
             let matches = matching_commands(&settings, query);
             assert_eq!(matches.len(), 1, "{query}");
             assert_eq!(matches[0].id, id, "{query}");
         }
+        assert!(matching_commands(&settings, "settings font size 15")[0].current);
+        assert!(matching_commands(&settings, "markdown font size 18")[0].current);
     }
 
     #[test]

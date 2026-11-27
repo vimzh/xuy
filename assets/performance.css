@@ -1,0 +1,22 @@
+.performance-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.performance-panel strong {
+    color: inherit;
+    font-weight: 600;
+}
+
+.workspace:has(> .performance-panel) {
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.workspace > .performance-panel {
+    padding: 4px 12px;
+    border-bottom: 1px solid var(--workspace-rule);
+}

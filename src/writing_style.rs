@@ -1,4 +1,4 @@
-//! Saved font, line spacing, and code theme available from the command bar.
+//! Saved font, line spacing, and code theme shared by Settings and the command bar.
 
 use dioxus::prelude::*;
 
@@ -161,4 +161,26 @@ pub(crate) fn apply_style_command(id: &str, style: Signal<WritingStyle>) -> bool
             false
         }
     })
+}
+
+#[component]
+pub(crate) fn WritingStyleSettings(style: Signal<WritingStyle>) -> Element {
+    let current = style();
+    rsx! {
+        for preference in WritingPreference::ALL {
+            label { key: "{preference as u8}",
+                span { "{preference.label()}" }
+                select {
+                    onchange: move |event| {
+                        if let Some(choice) = preference.find(&event.value()) {
+                            preference.set(style, choice);
+                        }
+                    },
+                    for &(id, label, _) in preference.choices() {
+                        option { value: id, selected: current.0[preference as usize].0 == id, "{label}" }
+                    }
+                }
+            }
+        }
+    }
 }

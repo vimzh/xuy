@@ -1,0 +1,23 @@
+#app-settings {
+    width: min(calc(100% - 24px), 22rem);
+}
+
+#settings-title {
+    margin: 0 0 16px;
+    font: inherit;
+    font-size: 1.125em;
+}
+
+#app-settings label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 12px;
+    margin-block: 10px;
+}
+
+#app-settings select {
+    min-height: 28px;
+    font: inherit;
+}

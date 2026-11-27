@@ -1,14 +1,15 @@
 .workspace {
     --sidebar-min-width: 160px;
     --sidebar-max-width: min(480px, 50vw);
-    --sidebar-default-width: clamp(264px, 25vw, 300px);
+    --sidebar-default-width: clamp(10rem, 26vw, 18.75rem);
     --sidebar-width: clamp(var(--sidebar-min-width), var(--sidebar-preferred-width, var(--sidebar-default-width)), var(--sidebar-max-width));
     --sidebar-track: var(--sidebar-width);
     --sidebar-motion: 260ms cubic-bezier(.22, .8, .2, 1);
     position: fixed;
     inset: 0;
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
     background: var(--surface);
     text-align: left;
 }
@@ -123,7 +124,7 @@
 
 .workspace-content {
     min-width: 0;
-    padding: clamp(18px, 3vw, 32px) clamp(20px, 5vw, 56px);
+    padding: clamp(10px, 3vh, 32px) clamp(12px, 5vw, 56px);
     overflow: auto;
     background: var(--paper);
 }
@@ -134,12 +135,17 @@
     margin-inline: auto;
 }
 
-.workspace-content > .note-editor {
-    font-family: var(--writing-font);
-    width: min(100%, var(--editor-page-width, 60ch));
+.workspace-content > .note-writing {
+    width: 100%;
 }
 
-.workspace-content > .note-editor[data-split="true"] {
+.note-editor {
+    width: min(100%, var(--editor-page-width, 60ch));
+    font-family: var(--writing-font);
+    font-size: var(--markdown-font-size);
+}
+
+.note-editor[data-split="true"] {
     --pane-gap: clamp(12px, 2vw, 32px);
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -187,6 +193,29 @@
     clip-path: inset(50%);
 }
 
+.note-status-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+    padding-inline: clamp(8px, 2vw, 18px);
+    border-top: 1px solid var(--workspace-rule);
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.note-status-name,
+.note-status-path {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.note-status-name { max-width: 35%; }
+.note-status-path { opacity: .76; }
+.note-status-words { margin-inline-start: auto; font-variant-numeric: tabular-nums; }
+
 .note-input,
 .markdown-preview {
     flex: 1;
@@ -204,12 +233,84 @@
 }
 
 .note-input {
+    position: relative;
+    z-index: 1;
     padding: 0;
     border: 0;
     outline: none;
     background: transparent;
     color: inherit;
+    caret-color: var(--note-caret-color);
     resize: none;
+}
+
+.note-input-frame {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.note-input-frame[hidden] {
+    display: none;
+}
+
+.note-caret-layer {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.note-caret-mirror {
+    position: absolute;
+    inset: 0 auto auto 0;
+    box-sizing: border-box;
+    visibility: hidden;
+}
+
+.note-input-frame[data-caret-drawn] .note-input {
+    caret-color: transparent;
+}
+
+.note-custom-caret {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 2px;
+    height: var(--note-caret-height);
+    background: var(--note-caret-color);
+}
+
+[data-caret-shape="block"] .note-custom-caret {
+    width: var(--note-caret-width);
+    background: color-mix(in srgb, var(--note-caret-color) 38%, transparent);
+}
+
+[data-caret-shape="underline"] .note-custom-caret {
+    width: var(--note-caret-width);
+    height: 2px;
+    margin-top: calc(var(--note-caret-height) - 2px);
+}
+
+[data-caret-blink="true"] .note-custom-caret:not([hidden]) {
+    animation: note-caret-blink 1s step-end infinite;
+}
+
+[data-caret-blink="true"][data-caret-blink-style="fade"] .note-custom-caret:not([hidden]) {
+    animation-timing-function: ease-in-out;
+}
+
+@keyframes note-caret-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    [data-caret-smooth="true"] .note-custom-caret[data-caret-moving] {
+        transition: transform 90ms ease-out;
+    }
 }
 
 .markdown-preview {
@@ -267,7 +368,7 @@
     }
 
     .workspace-sidebar {
-        max-height: 25vh;
+        max-height: min(25dvh, 10rem);
         grid-template-rows: minmax(0, 1fr);
         transition: grid-template-rows var(--sidebar-motion);
     }

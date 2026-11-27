@@ -1,0 +1,34 @@
+.landing-scene {
+    grid-area: 1 / 1 / -1 / 2;
+    contain: size;
+    overflow: hidden;
+    pointer-events: none;
+    mask-image: linear-gradient(
+        #000 6%,
+        rgb(0 0 0 / 80%) 15%,
+        rgb(0 0 0 / 51%) 27%,
+        rgb(0 0 0 / 23%) 39%,
+        rgb(0 0 0 / 5%) 51%,
+        transparent 60%
+    );
+    opacity: .32;
+}
+
+.landing-scene img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    filter: grayscale(1);
+}
+
+.landing-scene ~ .home-readouts .starter-date {
+    color: color-mix(in srgb, var(--ink) 75%, var(--muted));
+}
+
+@media (prefers-color-scheme: dark) {
+    .landing-scene {
+        opacity: .75;
+    }
+}

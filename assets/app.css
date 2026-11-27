@@ -47,36 +47,46 @@
 }
 
 body {
-    box-sizing: border-box;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    min-height: 100vh;
-    place-items: safe center;
     margin: 0;
-    padding: 24px;
     text-align: center;
 }
 
-#main {
-    width: min(100%, 24rem);
+#main:has(> .landing) {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(12px, 1fr) auto minmax(12px, 1fr);
+    min-height: 100dvh;
 }
 
-.black-hole {
-    width: 64ch;
-    margin: 0 auto 12px;
-    font-family: inherit;
-    /* Allow space for all 64 columns at Menlo's character width. */
-    font-size: min(9px, calc((100vw - 48px) / 40));
-    line-height: 1.2;
+.landing {
+    grid-area: 3 / 1;
+    place-self: center;
+    width: min(calc(100% - 24px), 24rem);
+}
+
+.home-readouts {
+    grid-area: 1 / 1;
+    z-index: 1;
+    display: grid;
+    justify-self: start;
+    min-width: 0;
+    gap: 4px;
+    margin: clamp(12px, 3vw, 24px);
     text-align: left;
 }
 
-h1 {
-    margin: 0 0 20px;
-    font-size: 56px;
-    font-weight: 400;
-    line-height: 1;
-    letter-spacing: -.05em;
+#starter-clock {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.starter-date {
+    font-size: 12px;
+    color: var(--muted);
 }
 
 nav {
@@ -114,34 +124,10 @@ button {
     cursor: pointer;
 }
 
-.landing nav button:focus-visible {
+.landing nav button:focus-visible,
+.app-dialog :is(button, select, .guide-content):focus-visible {
     outline: 1px solid var(--focus);
     outline-offset: 2px;
-}
-
-kbd {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    min-height: 22px;
-    border: 1px solid var(--control-border);
-    border-radius: 4px;
-    background: var(--inset);
-    font: inherit;
-    font-size: 12px;
-    line-height: 1;
-}
-
-.command-key {
-    /* Menlo renders the Command glyph shorter than its capitals. */
-    font-size: 16px;
-}
-
-h2 {
-    margin: 28px 0 0;
-    font-size: 13px;
-    font-weight: 500;
 }
 
 .app-dialog {
@@ -174,7 +160,41 @@ h2 {
     cursor: pointer;
 }
 
-.app-dialog button:focus-visible {
-    outline: 1px solid var(--focus);
-    outline-offset: 2px;
+#app-guide {
+    width: min(calc(100% - 24px), 48rem);
+    overflow-wrap: anywhere;
+}
+
+.guide-content {
+    max-height: calc(100dvh - 120px);
+    overflow: auto;
+}
+
+.guide-content h1 { margin-top: 0; font-size: 1.35em; }
+.guide-content h2 { font-size: 1.125em; }
+.guide-content :is(th, td) { padding: 4px 8px; border: 1px solid var(--control-border); }
+
+kbd {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 22px;
+    border: 1px solid var(--control-border);
+    border-radius: 4px;
+    background: var(--inset);
+    font: inherit;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.command-key {
+    /* Match the Command glyph's visual height to the key label. */
+    font-size: 16px;
+}
+
+h2 {
+    margin: 28px 0 0;
+    font-size: 13px;
+    font-weight: 500;
 }
