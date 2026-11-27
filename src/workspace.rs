@@ -153,19 +153,6 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
     rsx! {
         document::Stylesheet { href: asset!("/assets/workspace.css") }
         main { class: "workspace", aria_busy: busy() && confirmation.read().is_none(),
-            header { class: "workspace-header",
-                button { disabled: busy(),
-                    onclick: move |_| async move {
-                        if *busy.peek() { return; }
-                        busy.set(true);
-                        let confirmed = allow_leave(draft, saved, confirmation).await;
-                        busy.set(false);
-                        if confirmed { on_home.call(()); }
-                    },
-                    "Home"
-                }
-                h1 { title: "{root.peek().display()}", "{display_name(&root.peek())}" }
-            }
             div { class: "workspace-body",
                 FolderList {
                     root: root.peek().clone(),
@@ -173,6 +160,13 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
                     entries,
                     selected: selected(),
                     busy: busy(),
+                    on_home: move |_| async move {
+                        if *busy.peek() { return; }
+                        busy.set(true);
+                        let confirmed = allow_leave(draft, saved, confirmation).await;
+                        busy.set(false);
+                        if confirmed { on_home.call(()); }
+                    },
                     on_browse: move |entry| async move { browse(entry).await },
                     on_new: move |_| {
                         name.set(String::new());
@@ -226,6 +220,7 @@ fn FolderList(
     entries: Signal<Vec<Entry>>,
     selected: Option<PathBuf>,
     busy: bool,
+    on_home: EventHandler<()>,
     on_browse: EventHandler<Entry>,
     on_new: EventHandler<()>,
 ) -> Element {
@@ -244,6 +239,7 @@ fn FolderList(
     rsx! {
         aside { class: "folder-list", aria_label: "Notebook files",
             div { class: "folder-toolbar",
+                button { disabled: busy, onclick: move |_| on_home.call(()), "Home" }
                 button { disabled: busy, onclick: move |_| on_new.call(()), "New note" }
                 if let Some(parent) = parent {
                     button { disabled: busy, onclick: move |_| on_browse.call(Entry { path: parent.clone(), is_dir: true }), "Up" }
