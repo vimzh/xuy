@@ -88,6 +88,7 @@ fn App() -> Element {
     let mut guide_open = use_signal(|| false);
     let mut picker_open = use_signal(|| false);
     let saved = use_signal(notebook_picker::load);
+    let recent = use_signal(notebook_picker::load_recent);
     let mut show_performance = use_signal(|| false);
     let mut opening = use_signal(|| true);
     let mut error = use_signal(|| None::<String>);
@@ -108,6 +109,15 @@ fn App() -> Element {
             ))),
         }
         opening.set(false);
+    });
+    use_effect(move || {
+        if let Some(notebook) = opened.read().as_ref()
+            && let Err(failure) = notebook_picker::record_open(recent, notebook.root())
+        {
+            error.set(Some(format!(
+                "Could not save recently opened notebooks. {failure}"
+            )));
+        }
     });
     let icons = asset!("/assets/hugeicons", AssetOptions::folder());
     let mono = asset!("/assets/ia-writer-mono", AssetOptions::folder());
@@ -170,18 +180,27 @@ fn App() -> Element {
         }
         opening.set(false);
     };
-    let open_saved = move |path: PathBuf| async move {
-        if *opening.peek() || *busy.peek() || pending.peek().is_some() || !*picker_open.peek() {
+    let open_listed = move |path: PathBuf, from_picker: bool| async move {
+        if *opening.peek()
+            || *busy.peek()
+            || pending.peek().is_some()
+            || *picker_open.peek() != from_picker
+        {
             return;
         }
         opening.set(true);
         error.set(None);
         match workspace::OpenNotebook::open(path.clone(), false).await {
             Ok(notebook) if notebook.root() == path => {
-                document::eval("document.getElementById('notebook-picker').close();");
+                if from_picker {
+                    document::eval("document.getElementById('notebook-picker').close();");
+                }
                 activate(notebook);
             }
-            Ok(_) => error.set(Some(format!("{} now points to a different folder. Add the folder again to save its current location.", path.display()))),
+            Ok(_) => error.set(Some(format!(
+                "{} now points to a different folder. Use Open to select its current location.",
+                path.display()
+            ))),
             Err(failure) => error.set(Some(failure.to_string())),
         }
         opening.set(false);
@@ -336,8 +355,26 @@ fn App() -> Element {
                 if let Some(message) = error() {
                     p { role: "alert", "{message}" }
                 }
-                section { aria_labelledby: "recent-heading",
-                    h2 { id: "recent-heading", "Recently Opened" }
+                if !recent.read().is_empty() {
+                    section { class: "recent-notebooks", aria_labelledby: "recent-heading",
+                        h2 { id: "recent-heading", "Recently Opened" }
+                        ul { role: "list",
+                            for path in recent() {
+                                li { key: "{path:?}",
+                                    Button {
+                                        disabled: opening(),
+                                        title: "{path.display()}",
+                                        onclick: {
+                                            let path = path.clone();
+                                            move |_| open_listed(path.clone(), false)
+                                        },
+                                        img { src: "{icons}/folder-open.svg", alt: "", width: "16", height: "16" }
+                                        span { "{path.file_name().unwrap_or(path.as_os_str()).to_string_lossy()}" }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -372,7 +409,8 @@ fn App() -> Element {
         }
         if picker_open() {
             notebook_picker::NotebookPicker {
-                saved, busy: opening(), error: error(), on_open: open_saved,
+                saved, busy: opening(), error: error(),
+                on_open: move |path| open_listed(path, true),
                 on_add: move |_| choose(ChooseFolder::AddNotebook),
                 on_close: move |_| {
                     picker_open.set(false);

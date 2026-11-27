@@ -1,4 +1,4 @@
-//! Saved notebook folders and the quick-access dialog.
+//! Saved notebook folders, opening history, and the quick-access dialog.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -11,13 +11,22 @@ use crate::ui::{Button, ButtonKind};
 #[cfg(target_os = "macos")]
 use objc2_foundation::{NSArray, NSString, NSUserDefaults};
 
-#[cfg(target_os = "macos")]
-const KEY: &str = "xuy.notebooks";
+const SAVED_KEY: &str = "xuy.notebooks";
+const RECENT_KEY: &str = "xuy.recent-notebooks";
+const RECENT_LIMIT: usize = 5;
 
 pub(crate) fn load() -> Vec<PathBuf> {
+    load_paths(SAVED_KEY)
+}
+
+pub(crate) fn load_recent() -> Vec<PathBuf> {
+    load_paths(RECENT_KEY)
+}
+
+fn load_paths(_key: &str) -> Vec<PathBuf> {
     #[cfg(target_os = "macos")]
     if let Some(array) =
-        NSUserDefaults::standardUserDefaults().arrayForKey(&NSString::from_str(KEY))
+        NSUserDefaults::standardUserDefaults().arrayForKey(&NSString::from_str(_key))
     {
         return (0..array.len())
             .filter_map(
@@ -42,10 +51,37 @@ pub(crate) fn register(mut saved: Signal<Vec<PathBuf>>, path: &Path) -> io::Resu
     }
     let mut next = saved.peek().clone();
     next.push(path.to_owned());
+    save_paths(SAVED_KEY, &next)?;
+    saved.set(next);
+    Ok(())
+}
 
+pub(crate) fn record_open(mut recent: Signal<Vec<PathBuf>>, path: &Path) -> io::Result<()> {
+    if recent.peek().first().is_some_and(|first| first == path) {
+        return Ok(());
+    }
+    let next = recent_paths(&recent.peek(), path);
+    save_paths(RECENT_KEY, &next)?;
+    recent.set(next);
+    Ok(())
+}
+
+fn recent_paths(previous: &[PathBuf], path: &Path) -> Vec<PathBuf> {
+    std::iter::once(path.to_owned())
+        .chain(
+            previous
+                .iter()
+                .filter(|existing| *existing != path)
+                .cloned(),
+        )
+        .take(RECENT_LIMIT)
+        .collect()
+}
+
+fn save_paths(_key: &str, _paths: &[PathBuf]) -> io::Result<()> {
     #[cfg(target_os = "macos")]
     {
-        let strings = next
+        let strings = _paths
             .iter()
             .map(|path| {
                 path.to_str().map(NSString::from_str).ok_or_else(|| {
@@ -60,11 +96,10 @@ pub(crate) fn register(mut saved: Signal<Vec<PathBuf>>, path: &Path) -> io::Resu
         // NSUserDefaults accepts arrays of property-list strings.
         unsafe {
             NSUserDefaults::standardUserDefaults()
-                .setObject_forKey(Some(&array), &NSString::from_str(KEY))
+                .setObject_forKey(Some(&array), &NSString::from_str(_key))
         };
     }
 
-    saved.set(next);
     Ok(())
 }
 
@@ -106,5 +141,23 @@ pub(crate) fn NotebookPicker(
                 Button { kind: ButtonKind::Submit, disabled: busy, "Done" }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recent_notebooks_move_to_the_front_and_stay_bounded() {
+        let previous: Vec<_> = ["a", "b", "c", "d", "e"].map(PathBuf::from).into();
+        assert_eq!(
+            recent_paths(&previous, Path::new("c")),
+            ["c", "a", "b", "d", "e"].map(PathBuf::from)
+        );
+        assert_eq!(
+            recent_paths(&previous, Path::new("f")),
+            ["f", "a", "b", "c", "d"].map(PathBuf::from)
+        );
     }
 }

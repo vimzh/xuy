@@ -41,7 +41,7 @@
     color: var(--ink);
 }
 
-:where(.landing nav, .notebook-chrome, .dropdown) img,
+:where(.landing nav, .recent-notebooks, .notebook-chrome, .dropdown) img,
 .sidebar-entry-icon {
     filter: var(--icon-filter);
 }
@@ -109,22 +109,46 @@ button {
     text-align: left;
 }
 
-.landing nav button {
+.landing :is(nav, .recent-notebooks) button {
     border-radius: 4px;
     padding: 8px;
     font-size: 14px;
 }
 
-.landing h2 {
+.recent-notebooks {
+    width: min(100%, 16rem);
+    margin: 16px auto 0;
+    text-align: left;
+}
+
+.recent-notebooks h2 {
+    margin: 0 8px 6px;
     font-size: 12px;
 }
 
-.landing nav button:enabled:hover {
+.recent-notebooks ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.landing .recent-notebooks button {
+    width: 100%;
+    grid-template-columns: 16px minmax(0, 1fr);
+}
+
+.recent-notebooks button span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.landing :is(nav, .recent-notebooks) button:enabled:hover {
     background: var(--hover);
     cursor: pointer;
 }
 
-.landing nav button:focus-visible,
+.landing :is(nav, .recent-notebooks) button:focus-visible,
 .app-dialog :is(button, select, .guide-content):focus-visible {
     outline: 1px solid var(--focus);
     outline-offset: 2px;
