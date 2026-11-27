@@ -47,7 +47,7 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
     let mut selected = use_signal(|| None::<PathBuf>);
     let mut draft = use_signal(String::new);
     let mut saved = use_signal(String::new);
-    let mut preview = use_signal(|| true);
+    let mut preview = use_signal(|| false);
     let mut sidebar_open = use_signal(|| true);
     let mut chrome_hidden = use_signal(|| false);
     let mut history = use_signal(NoteHistory::default);
@@ -110,7 +110,7 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
                         history.write().visit(&path);
                     }
                     selected.set(Some(path));
-                    preview.set(true);
+                    preview.set(false);
                     chrome_hidden.set(false);
                     naming.set(false);
                 }
