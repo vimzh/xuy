@@ -28,9 +28,9 @@ fn App() -> Element {
             nav { aria_label: "Notebook actions",
                 for (label, shortcut, icon) in actions {
                     button { key: "{label}", disabled: true,
-                        kbd { aria_hidden: true, "{shortcut}" }
                         img { src: "{icons}/{icon}.svg", alt: "", width: "16", height: "16" }
                         span { "{label}" }
+                        kbd { aria_hidden: true, "{shortcut}" }
                     }
                 }
             }

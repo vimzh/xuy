@@ -35,7 +35,7 @@ nav {
 
 button {
     display: grid;
-    grid-template-columns: 38px 16px 1fr;
+    grid-template-columns: 16px 1fr 38px;
     align-items: center;
     column-gap: 10px;
     border: 1px solid #e2e2e2;
