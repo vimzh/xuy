@@ -4,6 +4,7 @@ pub(crate) mod index;
 pub(crate) mod locations;
 pub(crate) mod picker;
 
+use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::{self, Write};
@@ -25,6 +26,12 @@ impl Entry {
         }
         .unwrap_or(self.path.as_os_str())
     }
+}
+
+pub(crate) fn display_name(path: &Path) -> Cow<'_, str> {
+    path.file_name()
+        .unwrap_or(path.as_os_str())
+        .to_string_lossy()
 }
 
 pub(crate) fn open_root(path: &Path) -> io::Result<(PathBuf, Vec<Entry>)> {

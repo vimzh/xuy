@@ -6,6 +6,8 @@ use dioxus::prelude::*;
 
 use crate::ui::{Button, ButtonKind, Dialog, close_dialog};
 
+use super::display_name;
+
 const DIALOG_ID: &str = "notebook-picker";
 
 pub(crate) fn close() {
@@ -34,7 +36,7 @@ pub(crate) fn NotebookPicker(
                         li { key: "{path:?}",
                             Button { disabled: busy,
                                 onclick: { let path = path.clone(); move |_| on_open.call(path.clone()) },
-                                span { "{path.file_name().unwrap_or(path.as_os_str()).to_string_lossy()}" }
+                                span { "{display_name(&path)}" }
                                 small { "{path.display()}" }
                             }
                         }

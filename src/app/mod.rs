@@ -9,7 +9,7 @@ use dioxus::prelude::*;
 use std::path::PathBuf;
 
 use crate::commands::{self, native, palette};
-use crate::notebook::{locations, picker};
+use crate::notebook::{display_name, locations, picker};
 use crate::settings::{
     self, cursor, font_size::FontPreference, page_width, scene, theme, writing_style, zoom,
 };
@@ -210,7 +210,7 @@ pub(crate) fn App() -> Element {
         {
             if let Some(option) = theme::appearance_for_id(id) {
                 appearance.set(option);
-            } else if let Some(width) = commands::width_for_id(id) {
+            } else if let Some(width) = page_width::PageWidth::for_command(id) {
                 page_width.set(width);
             } else if !writing_style::apply_style_command(id, writing_style)
                 && !FontPreference::Settings.apply_command(id, settings_font)
@@ -328,7 +328,7 @@ pub(crate) fn App() -> Element {
                                             move |_| open_listed(path.clone(), false)
                                         },
                                         img { src: "{icons}/folder-open.svg", alt: "", width: "16", height: "16" }
-                                        span { "{path.file_name().unwrap_or(path.as_os_str()).to_string_lossy()}" }
+                                        span { "{display_name(&path)}" }
                                     }
                                 }
                             }

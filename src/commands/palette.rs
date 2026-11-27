@@ -287,7 +287,7 @@ mod tests {
         assert!(crate::settings::theme::appearance_for_id(dark.id) == Some(Appearance::Dark));
         let wide = matching_commands(&settings, "editor wide")[0];
         assert!(wide.current);
-        assert!(commands::width_for_id(wide.id) == Some(PageWidth::Wide));
+        assert!(PageWidth::for_command(wide.id) == Some(PageWidth::Wide));
         assert!(!matching_commands(&settings, "standard width")[0].current);
         assert_eq!(
             matching_commands(&settings, "reset zoom")[0].id,

@@ -622,7 +622,7 @@ pub(crate) fn Workspace(
     use_drop(|| native::update(false, false, ViewMode::Edit, false, false));
 
     let filename = match selected.read().as_ref() {
-        Some(path) => display_name(path),
+        Some(path) => notebook::display_name(path).into_owned(),
         None if naming() == Some(NewEntry::Note) => "Untitled".to_owned(),
         None => String::new(),
     };
@@ -764,13 +764,6 @@ pub(crate) fn Workspace(
             }
         }
     }
-}
-
-fn display_name(path: &Path) -> String {
-    path.file_name()
-        .unwrap_or(path.as_os_str())
-        .to_string_lossy()
-        .into_owned()
 }
 
 async fn allow_leave(

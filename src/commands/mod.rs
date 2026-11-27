@@ -49,12 +49,6 @@ pub(crate) fn terminal_commands(state: State) -> Vec<Command> {
     commands
 }
 
-const WIDTHS: [(PageWidth, &str, &str); 3] = [
-    (PageWidth::Narrow, "width-narrow", "Narrow"),
-    (PageWidth::Standard, "width-standard", "Standard"),
-    (PageWidth::Wide, "width-wide", "Wide"),
-];
-
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct PageActions {
     pub(crate) has_page: bool,
@@ -173,12 +167,7 @@ pub(crate) fn settings(
     width: PageWidth,
     edit_in_preview: bool,
 ) -> impl Iterator<Item = Command> {
-    let themes = crate::settings::theme::OPTIONS.map(|(option, id, _)| {
-        let label = match option {
-            Appearance::System => "System",
-            Appearance::Light => "Light",
-            Appearance::Dark => "Dark",
-        };
+    let themes = crate::settings::theme::OPTIONS.map(|(option, id, label)| {
         Command::new(
             id,
             "Theme",
@@ -188,7 +177,7 @@ pub(crate) fn settings(
         )
         .setting_value(label, appearance == option)
     });
-    let widths = WIDTHS.map(|(option, id, label)| {
+    let widths = PageWidth::OPTIONS.map(|(option, id, label, _)| {
         Command::new(
             id,
             "Writing Width",
@@ -241,10 +230,4 @@ pub(crate) fn settings(
         .chain(widths)
         .chain([preview_editing])
         .chain(zoom)
-}
-
-pub(crate) fn width_for_id(id: &str) -> Option<PageWidth> {
-    WIDTHS
-        .iter()
-        .find_map(|&(width, option_id, _)| (option_id == id).then_some(width))
 }

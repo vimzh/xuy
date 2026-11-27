@@ -7,6 +7,7 @@ use dioxus::prelude::*;
 use dioxus_elements::input_data::MouseButton;
 
 use crate::editor::ViewMode;
+use crate::notebook::display_name;
 use crate::settings::page_width::{PageWidth, PageWidthSelect};
 use crate::ui::{Button, Dropdown};
 
@@ -37,10 +38,7 @@ pub(crate) fn NotebookChrome(
     macos::use_titlebar(window.window.clone(), hidden);
 
     let icons = asset!("/assets/hugeicons", AssetOptions::folder());
-    let folder_name = folder
-        .file_name()
-        .unwrap_or(folder.as_os_str())
-        .to_string_lossy();
+    let folder_name = display_name(&folder);
     let sidebar_label = if sidebar_open {
         "Hide sidebar"
     } else {
