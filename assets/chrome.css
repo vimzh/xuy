@@ -1,6 +1,7 @@
 .notebook-chrome {
     position: relative;
-    height: 38px;
+    /* Center the text line on the native traffic lights and clear the buttons. */
+    padding-block: 8px 5px;
     user-select: none;
 }
 
@@ -11,13 +12,13 @@
 }
 
 .chrome-strip {
-    box-sizing: border-box;
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
     align-items: center;
-    height: 100%;
-    /* Match the centerline of the native traffic lights. */
-    padding-bottom: 5px;
+    height: 1em;
+}
+
+.chrome-drag {
     border-bottom: 1px solid var(--workspace-rule, #e5e5e5);
 }
 
@@ -54,8 +55,7 @@
     overflow: hidden;
     margin-inline: min(176px, 50%);
     color: #424242;
-    font-size: 12px;
-    line-height: 1.4;
+    line-height: 1;
     text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -67,7 +67,7 @@
     grid-template-columns: none;
     place-items: center;
     width: 26px;
-    height: 26px;
+    height: 24px;
     border: 0;
     border-radius: 4px;
     padding: 0;

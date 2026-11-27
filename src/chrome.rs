@@ -29,10 +29,10 @@ pub(crate) fn NotebookChrome(
     rsx! {
         document::Stylesheet { href: asset!("/assets/chrome.css") }
         header { class: "notebook-chrome",
-            if hidden() {
-                div { class: "chrome-reveal", onmousemove: move |_| hidden.set(false) }
-            } else {
-                div { class: "chrome-strip",
+            div { class: "chrome-strip",
+                if hidden() {
+                    div { class: "chrome-reveal", onmousemove: move |_| hidden.set(false) }
+                } else {
                     div { class: "chrome-drag", onmousedown: move |event| {
                         if event.trigger_button() == Some(MouseButton::Primary) {
                             window.drag();
@@ -70,7 +70,6 @@ pub(crate) fn NotebookChrome(
                             }
                         }
                     }
-                    span { class: "chrome-filename", "{filename}" }
                     button {
                         class: "chrome-settings",
                         r#type: "button",
@@ -80,6 +79,7 @@ pub(crate) fn NotebookChrome(
                         img { src: "{icons}/settings-01.svg", alt: "", width: "18", height: "18" }
                     }
                 }
+                span { class: "chrome-filename", "{filename}" }
             }
         }
     }
