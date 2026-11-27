@@ -18,9 +18,10 @@ fn App() -> Element {
         main {
             h1 { "xuy" }
             nav { aria_label: "Notebook actions",
-                button { disabled: true, "New Page" }
-                button { disabled: true, "Notebook Settings" }
-                button { disabled: true, "Docs" }
+                button { disabled: true, "new" }
+                button { disabled: true, "open" }
+                button { disabled: true, "settings" }
+                button { disabled: true, "docs" }
             }
             section { aria_labelledby: "recent-heading",
                 h2 { id: "recent-heading", "Recently Opened" }
