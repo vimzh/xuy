@@ -30,10 +30,11 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    left: calc(var(--sidebar-width, max(160px, 22%)) - 1px);
+    left: calc(var(--sidebar-track) - 1px);
     width: 1px;
     background: var(--workspace-rule);
     pointer-events: none;
+    transition: left var(--sidebar-motion);
 }
 
 .chrome-left,

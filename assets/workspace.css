@@ -1,11 +1,23 @@
 .workspace {
     --sidebar-width: clamp(264px, 25%, 300px);
+    --sidebar-track: var(--sidebar-width);
+    --sidebar-motion: 260ms cubic-bezier(.22, .8, .2, 1);
     position: fixed;
     inset: 0;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     background: var(--surface);
     text-align: left;
+}
+
+.workspace[data-sidebar-open="false"] {
+    --sidebar-track: 0px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .workspace {
+        --sidebar-motion: 0ms;
+    }
 }
 
 .unsaved-choice,
@@ -38,22 +50,27 @@
 .workspace-body {
     min-height: 0;
     display: grid;
-    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    grid-template-columns: var(--sidebar-track) minmax(0, 1fr);
+    transition: grid-template-columns var(--sidebar-motion);
 }
 
 .workspace-sidebar {
     min-width: 0;
     min-height: 0;
     display: grid;
+    overflow: hidden;
+    background: var(--sidebar-surface);
 }
 
-.workspace-sidebar[hidden] {
-    display: none;
+.workspace-sidebar > .notebook-sidebar {
+    box-sizing: border-box;
+    width: var(--sidebar-width);
+    transform: translateX(0);
+    transition: transform var(--sidebar-motion);
 }
 
-.workspace-body.sidebar-closed {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
+.workspace-sidebar[inert] > .notebook-sidebar {
+    transform: translateX(32px);
 }
 
 .workspace-content,
@@ -189,9 +206,16 @@
 
     .workspace-sidebar {
         max-height: 25vh;
+        grid-template-rows: minmax(0, 1fr);
+        transition: grid-template-rows var(--sidebar-motion);
+    }
+
+    .workspace-sidebar[inert] {
+        grid-template-rows: minmax(0, 0fr);
     }
 
     .workspace-sidebar .notebook-sidebar {
+        width: 100%;
         border-right: 0;
         border-bottom: 1px solid var(--workspace-rule);
     }

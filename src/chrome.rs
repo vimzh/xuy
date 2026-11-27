@@ -56,9 +56,7 @@ pub(crate) fn NotebookChrome(
                             window.drag();
                         }
                     } }
-                    if sidebar_open {
-                        span { class: "chrome-sidebar-rule", aria_hidden: true }
-                    }
+                    span { class: "chrome-sidebar-rule", aria_hidden: true }
                     div { class: "chrome-left",
                         button {
                             r#type: "button",

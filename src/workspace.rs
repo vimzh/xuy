@@ -260,6 +260,7 @@ pub(crate) fn Workspace(
         document::Stylesheet { href: asset!("/assets/workspace.css") }
         main {
             class: "workspace",
+            "data-sidebar-open": sidebar_open(),
             style: "--editor-page-width: {columns}ch",
             aria_busy: busy() && confirmation.read().is_none(),
             onkeydown: move |event| {
@@ -286,8 +287,8 @@ pub(crate) fn Workspace(
                 on_back: move |_| move_history(-1),
                 on_forward: move |_| move_history(1),
             }
-            div { class: if sidebar_open() { "workspace-body" } else { "workspace-body sidebar-closed" },
-                div { id: "workspace-sidebar", class: "workspace-sidebar", hidden: !sidebar_open(),
+            div { class: "workspace-body",
+                div { id: "workspace-sidebar", class: "workspace-sidebar", "inert": (!sidebar_open()).then_some(""),
                     WorkspaceSidebar {
                         root: root.peek().clone(),
                         entries,
