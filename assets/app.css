@@ -8,11 +8,16 @@
 body {
     box-sizing: border-box;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     min-height: 100vh;
     place-items: safe center;
     margin: 0;
     padding: 24px;
     text-align: center;
+}
+
+#main {
+    width: min(100%, 16rem);
 }
 
 h1 {
@@ -24,17 +29,23 @@ h1 {
 }
 
 nav {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: grid;
     gap: 4px;
 }
 
 button {
+    display: grid;
+    grid-template-columns: 3ch 1fr;
+    column-gap: 1ch;
     border: 0;
-    padding: 6px 4px;
+    padding: 6px 0;
     background: none;
     color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+kbd {
     font: inherit;
 }
 
