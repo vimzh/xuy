@@ -68,7 +68,6 @@
         border-radius: 7px;
         background: var(--surface);
         color: var(--ink);
-        box-shadow: 0 5px 18px var(--menu-shadow);
         font: 12px/1.35 Menlo, monospace;
     }
 

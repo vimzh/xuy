@@ -11,7 +11,6 @@
     --inset: #eeeae4;
     --focus: #655a4e;
     --icon-filter: none;
-    --menu-shadow: rgb(0 0 0 / 10%);
     color-scheme: light dark;
     background: var(--surface);
     color: var(--ink);
@@ -32,7 +31,6 @@
         --inset: #2d2925;
         --focus: #aa9c8b;
         --icon-filter: invert(.9);
-        --menu-shadow: rgb(0 0 0 / 35%);
     }
 }
 
