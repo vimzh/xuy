@@ -1,5 +1,6 @@
 mod chrome;
 mod command_bar;
+mod commands;
 mod dropdown;
 mod editor;
 mod modal;
@@ -43,15 +44,16 @@ fn main() {
 
 #[component]
 fn App() -> Element {
-    theme::use_appearance_menu();
-    let zoom = zoom::use_zoom_shortcuts();
+    let mut appearance = theme::use_appearance();
+    let (zoom, set_zoom) = zoom::use_zoom_shortcuts();
     let scale = f64::from(zoom()) / 100.0;
     let mut opened = use_signal(|| None::<workspace::OpenNotebook>);
     let mut pending = use_signal(|| None::<workspace::OpenNotebook>);
     let mut palette_command = use_signal(|| None::<&'static str>);
+    let mut page_actions = use_signal(commands::PageActions::default);
     let mut command_open = use_signal(|| false);
     let busy = use_signal(|| false);
-    let page_width = use_signal(page_width::PageWidth::default);
+    let mut page_width = use_signal(page_width::PageWidth::default);
     let mut picker_open = use_signal(|| false);
     let saved = use_signal(notebook_picker::load);
     let mut opening = use_signal(|| true);
@@ -170,17 +172,30 @@ fn App() -> Element {
         if let Some(id) = choice
             && !commands_blocked()
         {
-            let in_notebook = opened.peek().is_some();
-            match id {
-                notebook_menu::NEW_NOTE
-                | notebook_menu::NEW_FOLDER
-                | notebook_menu::HOME
-                | notebook_menu::TOGGLE_SIDEBAR
-                    if in_notebook =>
-                {
-                    palette_command.set(Some(id))
+            if let Some(option) = theme::appearance_for_id(id) {
+                appearance.set(option);
+            } else if let Some(width) = commands::width_for_id(id) {
+                page_width.set(width);
+            } else {
+                let in_notebook = opened.peek().is_some();
+                match id {
+                    commands::ZOOM_IN => set_zoom.call(zoom::ZoomAction::In),
+                    commands::ZOOM_OUT => set_zoom.call(zoom::ZoomAction::Out),
+                    commands::RESET_ZOOM => set_zoom.call(zoom::ZoomAction::Reset),
+                    notebook_menu::NEW_NOTE
+                    | notebook_menu::NEW_FOLDER
+                    | notebook_menu::HOME
+                    | notebook_menu::TOGGLE_SIDEBAR
+                    | notebook_menu::TOGGLE_PREVIEW
+                    | notebook_menu::SAVE
+                    | commands::PREVIOUS_PAGE
+                    | commands::NEXT_PAGE
+                        if in_notebook =>
+                    {
+                        palette_command.set(Some(id))
+                    }
+                    _ => run_app_command(id),
                 }
-                _ => run_app_command(id),
             }
         }
     };
@@ -198,11 +213,15 @@ fn App() -> Element {
             workspace::Workspace {
                 key: "{key}",
                 opened: notebook, page_width, zoom: scale,
-                busy, pending, error, modal_open, palette_command,
-                on_switch: move |notebook| opened.set(Some(notebook)),
+                busy, pending, error, modal_open, palette_command, page_actions,
+                on_switch: move |notebook| {
+                    page_actions.set(commands::PageActions::default());
+                    opened.set(Some(notebook));
+                },
                 on_home: move |_| {
                     workspace_session::clear();
                     error.set(None);
+                    page_actions.set(commands::PageActions::default());
                     opened.set(None);
                 },
             }
@@ -237,7 +256,11 @@ fn App() -> Element {
         }
         if command_open() {
             command_bar::CommandBar {
-                commands: command_bar::notebook_commands(opened.read().is_some()),
+                commands: {
+                    let mut commands = commands::notebook_commands(opened.read().is_some(), page_actions());
+                    commands.extend(commands::settings(appearance(), page_width()));
+                    commands
+                },
                 on_close: palette_closed,
             }
         }

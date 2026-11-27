@@ -5,7 +5,7 @@
     box-sizing: border-box;
     width: min(28rem, calc(100% - 32px));
     height: max-content;
-    max-height: calc(100dvh - 32px);
+    max-height: min(30rem, calc(100dvh - 32px));
     margin: auto;
     padding: 6px;
     border: 1px solid var(--control-border);
@@ -114,6 +114,16 @@
 
 #command-options button[data-selected="true"] {
     background: var(--selected);
+}
+
+.command-section {
+    padding: 8px 10px 3px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.command-current {
+    color: var(--muted);
 }
 
 #command-options button:focus-visible {

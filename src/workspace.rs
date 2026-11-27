@@ -12,6 +12,7 @@ use tokio::{
 };
 
 use crate::chrome::NotebookChrome;
+use crate::commands::{self, PageActions};
 use crate::editor::Editor;
 use crate::note_history::NoteHistory;
 use crate::notebook::{self, Entry};
@@ -129,6 +130,7 @@ pub(crate) fn Workspace(
     mut error: Signal<Option<String>>,
     mut pending: Signal<Option<OpenNotebook>>,
     mut palette_command: Signal<Option<&'static str>>,
+    mut page_actions: Signal<PageActions>,
     modal_open: Memo<bool>,
     on_switch: EventHandler<OpenNotebook>,
     on_home: EventHandler<()>,
@@ -404,6 +406,12 @@ pub(crate) fn Workspace(
         }
         notebook_menu::TOGGLE_SIDEBAR => toggle_sidebar(()),
         notebook_menu::TOGGLE_PREVIEW => toggle_preview(()),
+        commands::PREVIOUS_PAGE => {
+            spawn(move_history(-1));
+        }
+        commands::NEXT_PAGE => {
+            spawn(move_history(1));
+        }
         notebook_menu::SAVE => {
             spawn(save(None));
         }
@@ -417,7 +425,24 @@ pub(crate) fn Workspace(
         }
     });
     use_effect(move || {
-        notebook_menu::update(true, selected.read().is_some(), preview(), dirty(), busy())
+        let history = history.read();
+        let actions = PageActions {
+            has_page: selected.read().is_some(),
+            preview: preview(),
+            dirty: dirty(),
+            can_back: history.destination(-1).is_some(),
+            can_forward: history.destination(1).is_some(),
+        };
+        if *page_actions.peek() != actions {
+            page_actions.set(actions);
+        }
+        notebook_menu::update(
+            true,
+            actions.has_page,
+            actions.preview,
+            actions.dirty,
+            busy(),
+        );
     });
     use_drop(|| notebook_menu::update(false, false, false, false, false));
 

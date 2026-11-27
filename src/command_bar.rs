@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 
-use crate::{modal::run_dialog, notebook_menu};
+use crate::modal::run_dialog;
 
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct Command {
@@ -11,6 +11,8 @@ pub(crate) struct Command {
     icon: &'static str,
     shortcut: &'static str,
     keywords: &'static str,
+    setting: bool,
+    current: bool,
 }
 
 impl Command {
@@ -27,56 +29,16 @@ impl Command {
             icon,
             shortcut,
             keywords,
+            setting: false,
+            current: false,
         }
     }
-}
 
-pub(crate) fn notebook_commands(in_notebook: bool) -> Vec<Command> {
-    use notebook_menu::*;
-    let mut commands = vec![
-        Command::new(
-            NEW_NOTEBOOK,
-            "New Project…",
-            "add-01",
-            "⌥⌘N",
-            "new notebook create",
-        ),
-        Command::new(
-            OPEN_FOLDER,
-            "Open Folder…",
-            "folder-open",
-            "⌘O",
-            "open project notebook",
-        ),
-        Command::new(
-            NOTEBOOKS,
-            "Saved Notebooks…",
-            "notebook-01",
-            "⌘P",
-            "projects switch",
-        ),
-        Command::new(NEW_NOTE, "New Page…", "file-02", "⌘N", "new note create"),
-    ];
-    if in_notebook {
-        commands.extend([
-            Command::new(HOME, "Go Home", "home-01", "", "start landing"),
-            Command::new(
-                NEW_FOLDER,
-                "New Folder…",
-                "folder-01",
-                "⇧⌘N",
-                "subfolder create",
-            ),
-            Command::new(
-                TOGGLE_SIDEBAR,
-                "Toggle Sidebar",
-                "sidebar-left",
-                "⌘B",
-                "show hide files",
-            ),
-        ]);
+    pub(crate) const fn setting(mut self, current: bool) -> Self {
+        self.setting = true;
+        self.current = current;
+        self
     }
-    commands
 }
 
 fn matching_commands(commands: &[Command], query: &str) -> Vec<Command> {
@@ -107,7 +69,17 @@ pub(crate) fn CommandBar(
     let mut chosen = use_signal(|| None);
     let icons = asset!("/assets/hugeicons", AssetOptions::folder());
     let options = matching_commands(&commands, &query.read());
-    let selected = options.get(active()).copied();
+    let selected = options
+        .get(active().min(options.len().saturating_sub(1)))
+        .copied();
+    let settings_start = if query.read().trim().is_empty() {
+        options
+            .iter()
+            .find(|command| command.setting)
+            .map(|command| command.id)
+    } else {
+        None
+    };
     let mut choose = move |command: Command| {
         chosen.set(Some(command.id));
         close();
@@ -170,12 +142,18 @@ pub(crate) fn CommandBar(
             ul { id: "command-options", aria_label: "Commands",
                 for command in options {
                     li { key: "{command.id}",
+                        if settings_start == Some(command.id) {
+                            div { class: "command-section", "Settings" }
+                        }
                         button { r#type: "button", id: "command-{command.id}",
                             "data-selected": selected == Some(command),
+                            aria_current: command.current.then_some("true"),
                             onclick: move |_| choose(command),
                             img { src: "{icons}/{command.icon}.svg", alt: "", width: "18", height: "18" }
                             span { "{command.label}" }
-                            if !command.shortcut.is_empty() {
+                            if command.current {
+                                span { class: "command-current", aria_hidden: true, "✓" }
+                            } else if !command.shortcut.is_empty() {
                                 kbd { aria_hidden: true, "{command.shortcut}" }
                             }
                         }
@@ -183,7 +161,10 @@ pub(crate) fn CommandBar(
                 }
             }
             if let Some(command) = selected {
-                span { class: "command-announcement", role: "status", "{command.label}" }
+                span { class: "command-announcement", role: "status",
+                    "{command.label}"
+                    if command.current { ", current setting" }
+                }
             } else {
                 p { class: "command-empty", role: "status", "No matching commands." }
             }
@@ -194,11 +175,12 @@ pub(crate) fn CommandBar(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{commands, notebook_menu};
 
     #[test]
     fn filters_by_words_and_aliases_in_the_current_workspace() {
-        let home = notebook_commands(false);
-        let editing = notebook_commands(true);
+        let home = commands::notebook_commands(false, commands::PageActions::default());
+        let editing = commands::notebook_commands(true, commands::PageActions::default());
         assert_eq!(
             matching_commands(&home, " NEW  NOTEBOOK ")[0].id,
             notebook_menu::NEW_NOTEBOOK
@@ -209,5 +191,54 @@ mod tests {
             notebook_menu::HOME
         );
         assert!(matching_commands(&editing, "unrelated").is_empty());
+    }
+
+    #[test]
+    fn exposes_only_page_actions_that_can_run() {
+        let blank_notebook = commands::notebook_commands(true, commands::PageActions::default());
+        assert!(matching_commands(&blank_notebook, "preview").is_empty());
+        assert!(matching_commands(&blank_notebook, "save page").is_empty());
+
+        let previewing = commands::notebook_commands(
+            true,
+            commands::PageActions {
+                has_page: true,
+                preview: true,
+                dirty: true,
+                can_back: true,
+                can_forward: false,
+            },
+        );
+        assert_eq!(
+            matching_commands(&previewing, "edit source")[0].id,
+            notebook_menu::TOGGLE_PREVIEW
+        );
+        assert_eq!(
+            matching_commands(&previewing, "save page")[0].id,
+            notebook_menu::SAVE
+        );
+        assert_eq!(
+            matching_commands(&previewing, "go back")[0].id,
+            commands::PREVIOUS_PAGE
+        );
+        assert!(matching_commands(&previewing, "next page").is_empty());
+    }
+
+    #[test]
+    fn searches_settings_and_marks_the_active_values() {
+        use crate::{page_width::PageWidth, theme::Appearance};
+
+        let settings: Vec<_> = commands::settings(Appearance::Dark, PageWidth::Wide).collect();
+        let dark = matching_commands(&settings, "appearance dark")[0];
+        assert!(dark.current);
+        assert!(crate::theme::appearance_for_id(dark.id) == Some(Appearance::Dark));
+        let wide = matching_commands(&settings, "editor wide")[0];
+        assert!(wide.current);
+        assert!(commands::width_for_id(wide.id) == Some(PageWidth::Wide));
+        assert!(!matching_commands(&settings, "standard width")[0].current);
+        assert_eq!(
+            matching_commands(&settings, "reset zoom")[0].id,
+            commands::RESET_ZOOM
+        );
     }
 }

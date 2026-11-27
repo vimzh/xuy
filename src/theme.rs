@@ -8,6 +8,8 @@ use dioxus::desktop::{
     use_muda_event_handler, use_window,
 };
 
+use dioxus::prelude::*;
+
 #[cfg(target_os = "macos")]
 use objc2_foundation::{NSString, NSUserDefaults};
 
@@ -23,7 +25,7 @@ pub(crate) enum Appearance {
     Dark = 2,
 }
 
-const OPTIONS: [(Appearance, &str, &str); 3] = [
+pub(crate) const OPTIONS: [(Appearance, &str, &str); 3] = [
     (Appearance::System, "xuy-theme-system", "System"),
     (Appearance::Light, "xuy-theme-light", "Light"),
     (Appearance::Dark, "xuy-theme-dark", "Dark"),
@@ -82,13 +84,16 @@ pub(crate) fn menu(initial: Appearance) -> Submenu {
     submenu
 }
 
-pub(crate) fn use_appearance_menu() {
+pub(crate) fn use_appearance() -> Signal<Appearance> {
     let window = use_window();
+    let mut selected = use_signal(Appearance::load);
     use_muda_event_handler(move |event| {
-        let Some(&(appearance, _, _)) = OPTIONS.iter().find(|(_, id, _)| event.id().0 == *id)
-        else {
-            return;
-        };
+        if let Some(appearance) = appearance_for_id(&event.id().0) {
+            selected.set(appearance);
+        }
+    });
+    use_effect(move || {
+        let appearance = selected();
         window.set_theme(appearance.native());
         #[cfg(target_os = "macos")]
         appearance.save();
@@ -100,4 +105,12 @@ pub(crate) fn use_appearance_menu() {
             }
         });
     });
+
+    selected
+}
+
+pub(crate) fn appearance_for_id(id: &str) -> Option<Appearance> {
+    OPTIONS
+        .iter()
+        .find_map(|(appearance, option_id, _)| (*option_id == id).then_some(*appearance))
 }
