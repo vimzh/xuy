@@ -349,7 +349,7 @@ fn editable_span(
     html
 }
 
-fn append_plain_text(output: &mut String, event: &Event<'_>) {
+pub(crate) fn append_plain_text(output: &mut String, event: &Event<'_>) {
     match event {
         Event::Text(text) | Event::Code(text) | Event::InlineHtml(text) | Event::Html(text) => {
             output.push_str(text);

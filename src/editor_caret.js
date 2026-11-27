@@ -1,4 +1,4 @@
-// Share textarea geometry between the caret, heading jumps, and highlight backgrounds.
+// Share textarea geometry between the caret, navigation jumps, and highlight backgrounds.
 const editor = document.getElementById("note-source");
 const frame = editor.parentElement;
 const layer = frame.querySelector(".note-caret-layer");
@@ -22,6 +22,7 @@ let snapNext = true;
 let highlightRanges = [];
 let encodedRanges;
 let highlightsDirty = true;
+let pendingJump;
 
 function canDraw() {
     return document.hasFocus() && !document.hidden && document.activeElement === editor &&
@@ -144,7 +145,14 @@ function resize() {
 
 const resized = new ResizeObserver(resize);
 const changed = new MutationObserver(records => {
-    if (records.some(record => record.attributeName === "style")) layoutDirty = true;
+    if (records.some(record => record.attributeName === "style" || record.attributeName === "hidden")) {
+        layoutDirty = true;
+    }
+    if (pendingJump && !frame.hidden) {
+        const selection = pendingJump;
+        pendingJump = undefined;
+        jump(...selection);
+    }
     readHighlights();
     queue(true, true);
 });
@@ -159,14 +167,19 @@ function readHighlights() {
     if (!highlightRanges.length) highlightLayer.replaceChildren();
 }
 
-function jump(offset) {
-    if (editor.readOnly || composing || offset > editor.value.length) return;
+function jump(start, end) {
+    if (frame.hidden) {
+        // A highlight chosen in Preview can arrive before Edit is visible.
+        pendingJump = [start, end];
+        return;
+    }
+    if (editor.readOnly || composing || end > editor.value.length) return;
     syncMirror();
-    range.setStart(text, offset);
+    range.setStart(text, start);
     range.collapse(true);
     const y = range.getBoundingClientRect().top - mirror.getBoundingClientRect().top;
     editor.focus({ preventScroll: true });
-    editor.setSelectionRange(offset, offset);
+    editor.setSelectionRange(start, end);
     if (y < editor.scrollTop || y + 24 > editor.scrollTop + editor.clientHeight) {
         editor.scrollTop = y - editor.clientHeight / 3;
     }
@@ -202,7 +215,7 @@ function imageDropTarget(event) {
 try {
     resized.observe(editor);
     changed.observe(frame, { attributes: true, attributeFilter: [
-        "data-caret-shape", "data-caret-blink", "data-caret-smooth", "data-caret-blink-style", "data-highlight-ranges",
+        "data-caret-shape", "data-caret-blink", "data-caret-smooth", "data-caret-blink-style", "data-highlight-ranges", "hidden",
     ] });
     changed.observe(editor, { attributes: true, attributeFilter: ["readonly"] });
     changed.observe(editor.closest(".workspace"), { attributes: true, attributeFilter: ["style"] });
@@ -226,7 +239,7 @@ try {
     listen(window, "focus", () => queue(true));
     readHighlights();
     queue(true);
-    for (let offset; Number.isInteger(offset = await dioxus.recv());) jump(offset);
+    for (let selection; Array.isArray(selection = await dioxus.recv());) jump(...selection);
 } finally {
     controller.abort();
     resized.disconnect();

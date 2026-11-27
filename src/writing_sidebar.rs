@@ -1,4 +1,6 @@
-//! The secondary sidebar for heading navigation and the highlight palette.
+//! The secondary sidebar for navigating headings and highlighted passages.
+
+use std::ops::Range;
 
 use dioxus::prelude::*;
 
@@ -13,6 +15,7 @@ pub(crate) fn WritingSidebar(
     busy: bool,
     feedback: Signal<Option<&'static str>>,
     on_jump: EventHandler<(usize, usize)>,
+    on_jump_highlight: EventHandler<Range<usize>>,
     on_highlight: EventHandler<Option<Color>>,
 ) -> Element {
     let mut show_highlights = use_signal(|| false);
@@ -26,23 +29,48 @@ pub(crate) fn WritingSidebar(
             }
             div { id: "writing-tools-view", class: "writing-tools-view",
                 if show_highlights() {
-                    p { class: "writing-hint",
-                        if preview { "Switch to Edit to highlight text." }
-                        else { "Select text, then choose a color." }
-                    }
-                    div { class: "highlight-colors", role: "group", aria_label: "Highlight color",
-                        for color in Color::ALL {
-                            Button { key: "{color.class()}", disabled: preview || busy,
-                                onclick: move |_| on_highlight.call(Some(color)),
-                                span { class: "highlight-swatch {color.class()}", aria_hidden: true }
-                                "{color.name()}"
+                    if summary.read().highlights.is_empty() {
+                        p { class: "writing-hint", "No highlighted text." }
+                    } else {
+                        ol { class: "note-highlights", role: "list", aria_label: "Highlighted passages",
+                            for passage in &summary.read().highlights {
+                                {
+                                    let text = passage.text.trim();
+                                    let label = if text.is_empty() { "Highlighted text" } else { text };
+                                    let range = passage.range.clone();
+                                    let color = passage.color.class();
+                                    rsx! {
+                                        li { key: "{range.start}",
+                                            Button { class: "highlight-jump", disabled: busy, title: "{label}",
+                                                onclick: move |_| on_jump_highlight.call(range.clone()),
+                                                span { class: "highlight-swatch {color}", aria_hidden: true }
+                                                span { class: "highlight-excerpt", "{label}" }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
-                    Button { class: "highlight-clear", disabled: preview || busy,
-                        onclick: move |_| on_highlight.call(None), "Clear highlight" }
-                    if let Some(message) = feedback() {
-                        p { class: "writing-hint", role: "status", "{message}" }
+                    if !preview {
+                        details { class: "highlight-tools",
+                            summary { "Highlight tools" }
+                            p { class: "writing-hint", "Select text, then choose a color." }
+                            div { class: "highlight-colors", role: "group", aria_label: "Highlight color",
+                                for color in Color::ALL {
+                                    Button { key: "{color.class()}", disabled: busy,
+                                        onclick: move |_| on_highlight.call(Some(color)),
+                                        span { class: "highlight-swatch {color.class()}", aria_hidden: true }
+                                        "{color.name()}"
+                                    }
+                                }
+                            }
+                            Button { class: "highlight-clear", disabled: busy,
+                                onclick: move |_| on_highlight.call(None), "Clear highlight" }
+                            if let Some(message) = feedback() {
+                                p { class: "writing-hint", role: "status", "{message}" }
+                            }
+                        }
                     }
                 } else if summary.read().headings.is_empty() {
                     p { class: "writing-hint", "No headings" }

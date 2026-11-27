@@ -4,7 +4,7 @@ use dioxus::prelude::{dioxus_core::use_drop, *};
 use pulldown_cmark::{Event, Parser, Tag, TagEnd};
 
 use crate::highlight;
-use crate::markdown::OPTIONS as MARKDOWN_OPTIONS;
+use crate::markdown::{OPTIONS as MARKDOWN_OPTIONS, append_plain_text};
 
 #[component]
 pub(crate) fn NoteStatusBar(filename: String, summary: Memo<NoteSummary>) -> Element {
@@ -47,6 +47,7 @@ pub(crate) fn NoteStatusBar(filename: String, summary: Memo<NoteSummary>) -> Ele
 pub(crate) struct NoteSummary {
     words: usize,
     pub(crate) headings: Vec<Heading>,
+    pub(crate) highlights: Vec<highlight::Passage>,
     highlight_ranges: Option<String>,
 }
 
@@ -89,8 +90,22 @@ impl NoteSummary {
         let mut offset = 0;
         let marks = highlight::marks(source);
         let mut mark_offsets = highlight::mark_offsets(&marks).peekable();
+        let mut highlights = highlight::passages(source, &marks);
+        let mut remaining = highlights.iter_mut();
+        let mut active_highlight: Option<&mut highlight::Passage> = None;
 
         for (event, range) in Parser::new_ext(source, MARKDOWN_OPTIONS).into_offset_iter() {
+            if matches!(event, Event::InlineHtml(_))
+                && mark_offsets.next_if_eq(&range.start).is_some()
+            {
+                if active_highlight.take().is_none() {
+                    active_highlight = remaining.next();
+                }
+                continue;
+            }
+            if let Some(passage) = active_highlight.as_deref_mut() {
+                append_plain_text(&mut passage.text, &event);
+            }
             match event {
                 Event::Start(Tag::Heading { level, .. }) => {
                     in_heading = true;
@@ -107,7 +122,6 @@ impl NoteSummary {
                         parent,
                     });
                 }
-                Event::InlineHtml(_) if mark_offsets.next_if_eq(&range.start).is_some() => {}
                 Event::Text(text)
                 | Event::Code(text)
                 | Event::Html(text)
@@ -148,7 +162,8 @@ impl NoteSummary {
         Self {
             words,
             headings,
-            highlight_ranges: highlight::editor_ranges(source, &marks),
+            highlight_ranges: highlight::editor_ranges(&highlights),
+            highlights,
         }
     }
 
@@ -226,6 +241,10 @@ mod tests {
             summary.highlight_ranges(),
             r#"[[33,38,"xuy-mint"],[167,171,"xuy-yellow"]]"#
         );
+        assert_eq!(summary.highlights.len(), 2);
+        assert_eq!(summary.highlights[0].range, 33..38);
+        assert_eq!(summary.highlights[0].text, "🦀 Hi");
+        assert_eq!(summary.highlights[1].text, "pair");
         assert_eq!(
             summary.headings[0].title(),
             r#"🧭 🦀 Hi and <mark class=xuy-rose onclick="danger()">extra</mark>"#
@@ -236,5 +255,23 @@ mod tests {
         );
         assert_eq!(summary.words, 10);
         assert_eq!(NoteSummary::parse("Plain note").highlight_ranges(), "[]");
+    }
+
+    #[test]
+    fn uses_readable_highlight_passages_in_note_order() {
+        let source = concat!(
+            "One <mark class=xuy-mint>**Review** &amp; keep\nthis</mark>.\n\n",
+            "Two <mark class=xuy-sky>**Review** &amp; keep\nthis</mark>.\n\n",
+            "~~~\n<mark class=xuy-rose>Example</mark>\n~~~",
+        );
+        let summary = NoteSummary::parse(source);
+        let [first, second] = summary.highlights.as_slice() else {
+            panic!("expected two highlighted passages");
+        };
+        assert_eq!(first.text, "Review & keep this");
+        assert_eq!(second.text, first.text);
+        assert_eq!(first.color.class(), "xuy-mint");
+        assert_eq!(second.color.class(), "xuy-sky");
+        assert!(first.range.end < second.range.start);
     }
 }

@@ -120,23 +120,50 @@ pub(crate) fn mark_offsets(marks: &[Mark]) -> impl Iterator<Item = usize> {
         .flat_map(|mark| [mark.open.start, mark.close.start])
 }
 
-pub(crate) fn editor_ranges(source: &str, marks: &[Mark]) -> Option<String> {
-    if marks.is_empty() {
+#[derive(PartialEq)]
+pub(crate) struct Passage {
+    pub(crate) range: Range<usize>,
+    pub(crate) color: Color,
+    pub(crate) text: String,
+}
+
+pub(crate) fn passages(source: &str, marks: &[Mark]) -> Vec<Passage> {
+    let (mut byte, mut offset) = (0, 0);
+    marks
+        .iter()
+        .map(|mark| {
+            offset += source[byte..mark.open.end].encode_utf16().count();
+            let start = offset;
+            offset += source[mark.open.end..mark.close.start]
+                .encode_utf16()
+                .count();
+            byte = mark.close.start;
+            Passage {
+                range: start..offset,
+                color: mark.color,
+                text: String::new(),
+            }
+        })
+        .collect()
+}
+
+pub(crate) fn editor_ranges(passages: &[Passage]) -> Option<String> {
+    if passages.is_empty() {
         return None;
     }
     let mut result = String::from("[");
-    let (mut byte, mut offset) = (0, 0);
-    for (index, mark) in marks.iter().enumerate() {
-        offset += source[byte..mark.open.end].encode_utf16().count();
-        let start = offset;
-        offset += source[mark.open.end..mark.close.start]
-            .encode_utf16()
-            .count();
-        byte = mark.close.start;
+    for (index, passage) in passages.iter().enumerate() {
         if index != 0 {
             result.push(',');
         }
-        write!(result, "[{start},{offset},\"{}\"]", mark.color.class()).unwrap();
+        write!(
+            result,
+            "[{},{},\"{}\"]",
+            passage.range.start,
+            passage.range.end,
+            passage.color.class()
+        )
+        .unwrap();
     }
     result.push(']');
     Some(result)

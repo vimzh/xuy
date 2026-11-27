@@ -60,7 +60,9 @@ You can also change **Writing width** in Settings. Settings and the toolbar shar
 
 The **Outline** in the right sidebar lists the active note’s headings and subheadings. Indents and guide lines show the hierarchy. Select a heading to jump to it in Edit or Preview. In a narrow window, **Outline** and **Highlights** move above the editor.
 
-In Edit, choose **Highlights**, select regular Markdown text, and pick **Yellow**, **Mint**, **Sky**, **Rose**, or **Lavender**. To recolor a highlight or clear it, select it or place the cursor inside it, then choose another color or **Clear highlight**. The colors adapt to Light and Dark. Highlights are saved in the Markdown file. Edit shows the inline markup and Preview shows the colored text.
+The **Highlights** tab lists the active note’s highlighted passages in note order. Select one to jump to it and select its text for revision. From Preview, selecting a passage opens Edit at that passage.
+
+In Edit or Side by Side, expand **Highlight tools** below the list to color selected text or clear a highlight. To recolor or clear an existing highlight, select its passage or place the cursor inside it, then choose a color or **Clear highlight**. Highlights are saved in the Markdown file. Edit shows the inline markup and Preview shows the colored text.
 
 ## Change appearance
 

@@ -56,10 +56,10 @@ impl ViewMode {
 pub(crate) fn Editor(
     draft: Signal<String>,
     dirty: Memo<bool>,
-    view_mode: Signal<ViewMode>,
+    mut view_mode: Signal<ViewMode>,
     edit_in_preview: bool,
     paths: MarkdownPaths,
-    preview_anchor: Signal<Option<String>>,
+    mut preview_anchor: Signal<Option<String>>,
     on_preview_open: EventHandler<PreviewTarget>,
     mut chrome_hidden: Signal<bool>,
     busy: bool,
@@ -161,7 +161,17 @@ pub(crate) fn Editor(
                         }}
                     "));
                 } else if let Some(tracker) = *tracker.peek() {
-                    let _ = tracker.send(offset);
+                    let _ = tracker.send((offset, offset));
+                }
+            },
+            on_jump_highlight: move |range: std::ops::Range<usize>| {
+                if *view_mode.peek() == ViewMode::Preview {
+                    preview_anchor.set(None);
+                    view_mode.set(ViewMode::Edit);
+                    chrome_hidden.set(false);
+                }
+                if let Some(tracker) = *tracker.peek() {
+                    let _ = tracker.send((range.start, range.end));
                 }
             },
             on_highlight: move |color| highlight_selection(color, feedback),
