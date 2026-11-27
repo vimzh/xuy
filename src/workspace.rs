@@ -6,7 +6,10 @@ use std::path::{Path, PathBuf};
 use dioxus::desktop::use_muda_event_handler;
 use dioxus::prelude::{dioxus_core::use_drop, *};
 use rfd::AsyncFileDialog;
-use tokio::sync::oneshot;
+use tokio::{
+    sync::oneshot,
+    time::{Duration, Instant, sleep_until},
+};
 
 use crate::chrome::NotebookChrome;
 use crate::editor::Editor;
@@ -52,6 +55,9 @@ pub(crate) fn Workspace(
     let mut selected = use_signal(|| None::<PathBuf>);
     let mut draft = use_signal(String::new);
     let mut saved = use_signal(String::new);
+    let mut last_edit = use_signal(|| None::<Instant>);
+    let mut failed_edit = use_signal(|| None::<Instant>);
+    let mut saving = use_signal(|| false);
     let mut preview = use_signal(|| false);
     let mut sidebar_open = use_signal(|| true);
     let mut chrome_hidden = use_signal(|| false);
@@ -180,13 +186,20 @@ pub(crate) fn Workspace(
         }
     };
 
-    let save = move |_| async move {
-        if *busy.peek() || *draft.peek() == *saved.peek() {
+    let save = move |expected_edit: Option<Instant>| async move {
+        let edited = *last_edit.peek();
+        if *busy.peek()
+            || *draft.peek() == *saved.peek()
+            || expected_edit.is_some_and(|expected| {
+                edited != Some(expected) || *failed_edit.peek() == Some(expected)
+            })
+        {
             return;
         }
         let Some(path) = selected.peek().clone() else {
             return;
         };
+        saving.set(true);
         busy.set(true);
         error.set(None);
         let root = root.peek().clone();
@@ -200,13 +213,27 @@ pub(crate) fn Workspace(
         match result {
             Ok(text) => {
                 saved.set(text);
+                failed_edit.set(None);
                 // Refresh the saved note's modification time in the sidebar.
                 drop(entries.write());
             }
-            Err(failure) => error.set(Some(failure.to_string())),
+            Err(failure) => {
+                failed_edit.set(edited);
+                error.set(Some(failure.to_string()));
+            }
         }
+        saving.set(false);
         busy.set(false);
     };
+    use_resource(move || async move {
+        let Some(edited) = last_edit() else { return };
+        if busy() || !dirty() || failed_edit() == Some(edited) {
+            return;
+        }
+        sleep_until(edited + Duration::from_secs(1)).await;
+        // Cancel superseded timers without interrupting a write already in progress.
+        spawn(save(Some(edited)));
+    });
 
     let go_home = move || async move {
         if *busy.peek() {
@@ -234,7 +261,7 @@ pub(crate) fn Workspace(
         notebook_menu::TOGGLE_SIDEBAR => toggle_sidebar(()),
         notebook_menu::TOGGLE_PREVIEW => toggle_preview(()),
         notebook_menu::SAVE => {
-            spawn(save(()));
+            spawn(save(None));
         }
         _ => {}
     });
@@ -329,7 +356,12 @@ pub(crate) fn Workspace(
                     }
                     if let Some(path) = selected() {
                         Editor { key: "{path:?}",
-                            draft, dirty, preview, chrome_hidden, busy: busy(), on_save: save,
+                            draft, dirty, preview, chrome_hidden, busy: busy() && !saving(),
+                            on_edit: move |text| {
+                                draft.set(text);
+                                last_edit.set(Some(Instant::now()));
+                            },
+                            on_save: move |_| save(None),
                         }
                     } else if !naming() {
                         p { class: "workspace-message", "Select a Markdown note." }

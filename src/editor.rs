@@ -3,11 +3,12 @@ use pulldown_cmark::{Event, LinkType, Options, Parser, Tag, TagEnd, html};
 
 #[component]
 pub(crate) fn Editor(
-    mut draft: Signal<String>,
+    draft: Signal<String>,
     dirty: Memo<bool>,
     preview: Signal<bool>,
     mut chrome_hidden: Signal<bool>,
     busy: bool,
+    on_edit: EventHandler<String>,
     on_save: EventHandler<()>,
 ) -> Element {
     rsx! {
@@ -39,7 +40,7 @@ pub(crate) fn Editor(
                     value: "{draft}",
                     onmounted: move |event| async move { let _ = event.set_focus(true).await; },
                     oninput: move |event| {
-                        draft.set(event.value());
+                        on_edit.call(event.value());
                         if !*chrome_hidden.peek() {
                             chrome_hidden.set(true);
                         }
