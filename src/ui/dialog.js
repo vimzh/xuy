@@ -1,6 +1,6 @@
 // Keep the editor out of WebKit's native modal path, which can hang on focus changes.
 const previousFocus = document.activeElement;
-const scrim = document.getElementById("settings-scrim");
+const scrim = document.getElementById(scrimId);
 const background = [...dialog.parentElement.children].filter(
     element => element !== dialog && element !== scrim && !element.inert,
 );
@@ -12,7 +12,7 @@ dialog.addEventListener("keydown", event => {
         return;
     }
     if (event.key !== "Tab") return;
-    const controls = dialog.querySelectorAll("select:enabled, button:enabled");
+    const controls = dialog.querySelectorAll(focusable);
     const first = controls[0];
     const last = controls[controls.length - 1];
     if (document.activeElement === (event.shiftKey ? first : last)) {

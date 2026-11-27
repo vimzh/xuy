@@ -4,7 +4,6 @@ mod clock;
 mod command_bar;
 mod commands;
 mod cursor;
-mod dropdown;
 mod editor;
 mod external_edit;
 mod font_size;
@@ -13,7 +12,6 @@ mod highlight;
 mod markdown;
 mod markdown_paths;
 mod markdown_preview;
-mod modal;
 mod note_history;
 mod note_status;
 mod notebook;
@@ -193,7 +191,7 @@ fn App() -> Element {
         match workspace::OpenNotebook::open(path.clone(), false).await {
             Ok(notebook) if notebook.root() == path => {
                 if from_picker {
-                    document::eval("document.getElementById('notebook-picker').close();");
+                    notebook_picker::close();
                 }
                 activate(notebook);
             }

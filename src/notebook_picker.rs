@@ -5,8 +5,7 @@ use std::path::{Path, PathBuf};
 
 use dioxus::prelude::*;
 
-use crate::modal::show_dialog;
-use crate::ui::{Button, ButtonKind};
+use crate::ui::{Button, ButtonKind, Dialog, close_dialog};
 
 #[cfg(target_os = "macos")]
 use objc2_foundation::{NSArray, NSString, NSUserDefaults};
@@ -14,6 +13,11 @@ use objc2_foundation::{NSArray, NSString, NSUserDefaults};
 const SAVED_KEY: &str = "xuy.notebooks";
 const RECENT_KEY: &str = "xuy.recent-notebooks";
 const RECENT_LIMIT: usize = 5;
+const DIALOG_ID: &str = "notebook-picker";
+
+pub(crate) fn close() {
+    close_dialog(DIALOG_ID);
+}
 
 pub(crate) fn load() -> Vec<PathBuf> {
     load_paths(SAVED_KEY)
@@ -114,9 +118,8 @@ pub(crate) fn NotebookPicker(
 ) -> Element {
     rsx! {
         document::Stylesheet { href: asset!("/assets/notebook-picker.css") }
-        dialog { id: "notebook-picker", class: "app-dialog", aria_labelledby: "notebook-picker-title",
-            aria_busy: busy,
-            onmounted: move |_| show_dialog("notebook-picker", on_close),
+        Dialog { id: DIALOG_ID, class: "app-dialog", aria_labelledby: "notebook-picker-title",
+            aria_busy: busy, on_close,
             h1 { id: "notebook-picker-title", "Notebooks" }
             if saved.read().is_empty() {
                 p { "No saved notebooks." }

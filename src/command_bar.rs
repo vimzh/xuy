@@ -2,8 +2,9 @@
 
 use dioxus::prelude::*;
 
-use crate::modal::run_dialog;
-use crate::ui::{Button, ButtonKind};
+use crate::ui::{Button, ButtonKind, Dialog, DialogScrim, close_dialog};
+
+const DIALOG_ID: &str = "command-bar";
 
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct Command {
@@ -75,7 +76,7 @@ fn matching_commands(commands: &[Command], query: &str) -> Vec<Command> {
 }
 
 pub(crate) fn close() {
-    document::eval("document.getElementById('command-bar')?.close()");
+    close_dialog(DIALOG_ID);
 }
 
 #[component]
@@ -126,12 +127,9 @@ pub(crate) fn CommandBar(
 
     rsx! {
         document::Stylesheet { href: asset!("/assets/command-bar.css") }
-        div { id: "command-scrim", aria_hidden: true, onclick: move |_| close() }
-        dialog { id: "command-bar", aria_label: "Command bar",
-            onmounted: move |_| async move {
-                run_dialog("command-bar", include_str!("command_bar_dialog.js")).await;
-                on_close.call(*chosen.peek());
-            },
+        Dialog { id: DIALOG_ID, aria_label: "Command bar",
+            scrim: DialogScrim { id: "command-scrim", focusable: "input, button" },
+            on_close: move |_| on_close.call(*chosen.peek()),
             div { class: "command-search",
                 img { src: "{icons}/search-01.svg", alt: "", width: "18", height: "18" }
                 input {
