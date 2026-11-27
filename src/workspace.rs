@@ -1,11 +1,10 @@
 //! The folder browser and its active Markdown note.
 
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use dioxus::desktop::use_muda_event_handler;
 use dioxus::prelude::{dioxus_core::use_drop, *};
-use rfd::AsyncFileDialog;
 use tokio::{
     sync::oneshot,
     time::{Duration, Instant, sleep_until},
@@ -16,104 +15,15 @@ use crate::commands::{self, PageActions};
 use crate::editor::Editor;
 use crate::note_history::NoteHistory;
 use crate::notebook::{self, Entry};
+use crate::notebook_index::{NoteTime, use_folder_index};
 use crate::notebook_menu;
 use crate::page_width::PageWidth;
-use crate::workspace_session::{self, WorkspaceSession};
+use crate::workspace_session;
 use crate::workspace_sidebar::{SidebarDivider, WorkspaceSidebar};
 
-#[derive(Clone, PartialEq)]
-pub(crate) struct OpenNotebook {
-    root: PathBuf,
-    folder: PathBuf,
-    entries: Vec<Entry>,
-    note: Option<(PathBuf, String)>,
-    start_new: bool,
-    restored: bool,
-}
+mod open;
 
-impl OpenNotebook {
-    pub(crate) async fn open(path: PathBuf, start_new: bool) -> io::Result<Self> {
-        let (root, entries) = on_disk(move || notebook::open_root(&path)).await?;
-        Ok(Self {
-            folder: root.clone(),
-            root,
-            entries,
-            note: None,
-            start_new,
-            restored: false,
-        })
-    }
-
-    pub(crate) async fn restore(session: WorkspaceSession) -> io::Result<(Self, Option<String>)> {
-        on_disk(move || Self::restore_on_disk(session)).await
-    }
-
-    fn restore_on_disk(session: WorkspaceSession) -> io::Result<(Self, Option<String>)> {
-        let (root, mut entries) = notebook::open_root(&session.root)?;
-        if root != session.root {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!(
-                    "{} now points to a different folder. Open it again to confirm its location.",
-                    session.root.display()
-                ),
-            ));
-        }
-        let mut folder = root.clone();
-        let mut warnings = Vec::new();
-        if session.folder != root {
-            match notebook::list(&root, &session.folder) {
-                Ok(children) => {
-                    folder = session.folder;
-                    entries = children;
-                }
-                Err(error) => warnings.push(format!("Could not restore sidebar folder. {error}")),
-            }
-        }
-        let note = session
-            .note
-            .and_then(|path| match notebook::read(&root, &path) {
-                Ok(text) => Some((path, text)),
-                Err(error) => {
-                    warnings.push(format!("Could not restore the last page. {error}"));
-                    None
-                }
-            });
-
-        Ok((
-            Self {
-                root,
-                folder,
-                entries,
-                note,
-                start_new: false,
-                restored: true,
-            },
-            (!warnings.is_empty()).then(|| warnings.join(" ")),
-        ))
-    }
-    pub(crate) fn root(&self) -> &Path {
-        &self.root
-    }
-}
-
-pub(crate) async fn pick_notebook(
-    title: &str,
-    start_new: bool,
-    can_create: bool,
-) -> io::Result<Option<OpenNotebook>> {
-    match AsyncFileDialog::new()
-        .set_title(title)
-        .set_can_create_directories(can_create)
-        .pick_folder()
-        .await
-    {
-        Some(folder) => OpenNotebook::open(folder.path().to_owned(), start_new)
-            .await
-            .map(Some),
-        None => Ok(None),
-    }
-}
+pub(crate) use open::{OpenNotebook, pick_notebook};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum NewEntry {
@@ -137,7 +47,7 @@ pub(crate) fn Workspace(
 ) -> Element {
     let root = use_signal(|| opened.root);
     let mut directory = use_signal(|| opened.folder);
-    let mut entries = use_signal(|| opened.entries);
+    let index = use_folder_index(|| opened.entries);
     let mut selected = use_signal(|| opened.note.as_ref().map(|(path, _)| path.clone()));
     let mut draft = use_signal(|| opened.note.map_or_else(String::new, |(_, text)| text));
     let mut saved = use_signal(|| draft.peek().clone());
@@ -188,7 +98,7 @@ pub(crate) fn Workspace(
             let folder = path.clone();
             match on_disk(move || notebook::list(&root, &folder)).await {
                 Ok(children) => {
-                    entries.set(children);
+                    index.replace(children);
                     directory.set(path);
                     remember_location.set(true);
                 }
@@ -212,7 +122,7 @@ pub(crate) fn Workspace(
                 Ok((text, folder)) => {
                     if let Some((parent, children)) = folder {
                         directory.set(parent);
-                        entries.set(children);
+                        index.replace(children);
                     }
                     saved.set(text.clone());
                     draft.set(text);
@@ -277,7 +187,7 @@ pub(crate) fn Workspace(
                 match result {
                     Ok((note, children)) => {
                         match children {
-                            Ok(children) => entries.set(children),
+                            Ok(children) => index.replace(children),
                             Err(failure) => {
                                 error.set(Some(format!("Created successfully. {failure}")))
                             }
@@ -321,17 +231,23 @@ pub(crate) fn Workspace(
         let root = root.peek().clone();
         let original = saved.peek().clone();
         let text = draft.peek().clone();
+        let listed = path.parent() == Some(directory.peek().as_path());
         let result = on_disk(move || {
             notebook::save(&root, &path, &original, &text)?;
-            Ok(text)
+            let updated = listed.then(|| {
+                let time = NoteTime::read(&root, &path);
+                (path, time)
+            });
+            Ok((text, updated))
         })
         .await;
         match result {
-            Ok(text) => {
+            Ok((text, updated)) => {
                 saved.set(text);
                 failed_edit.set(None);
-                // Refresh the saved note's modification time in the sidebar.
-                drop(entries.write());
+                if let Some((path, time)) = updated {
+                    index.note_saved(path, time);
+                }
             }
             Err(failure) => {
                 failed_edit.set(edited);
@@ -493,7 +409,7 @@ pub(crate) fn Workspace(
                 div { id: "workspace-sidebar", class: "workspace-sidebar", "inert": (!sidebar_open()).then_some(""),
                     WorkspaceSidebar {
                         root: root.peek().clone(),
-                        entries,
+                        index,
                         selected: selected(),
                         busy: busy(),
                         on_browse: move |entry| browse(entry, None),
@@ -576,58 +492,4 @@ async fn on_disk<T: Send + 'static>(
     tokio::task::spawn_blocking(operation)
         .await
         .map_err(io::Error::other)?
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-
-    #[test]
-    fn restores_the_sidebar_folder_and_active_page_independently() -> io::Result<()> {
-        let temporary = tempfile::tempdir()?;
-        let root = temporary.path().canonicalize()?;
-        let folder = root.join("Drafts");
-        let note = root.join("Active.md");
-        fs::create_dir(&folder)?;
-        fs::write(&note, "# Saved page")?;
-        let (opened, warning) = OpenNotebook::restore_on_disk(WorkspaceSession {
-            root: root.clone(),
-            folder: folder.clone(),
-            note: Some(note.clone()),
-        })?;
-
-        assert_eq!(opened.root, root);
-        assert_eq!(opened.folder, folder);
-        assert!(opened.entries.is_empty());
-        assert_eq!(opened.note, Some((note, "# Saved page".to_owned())));
-        assert!(warning.is_none());
-        Ok(())
-    }
-
-    #[test]
-    fn reports_missing_paths_and_opens_the_available_notebook() -> io::Result<()> {
-        let temporary = tempfile::tempdir()?;
-        let root = temporary.path().canonicalize()?;
-        let folder = root.join("Missing folder");
-        let note = folder.join("Missing page.md");
-        let (opened, warning) = OpenNotebook::restore_on_disk(WorkspaceSession {
-            root: root.clone(),
-            folder: folder.clone(),
-            note: Some(note),
-        })?;
-
-        assert_eq!(opened.folder, root);
-        assert!(opened.note.is_none());
-        let warning = warning.expect("missing paths should be reported");
-        assert!(warning.contains("Could not restore sidebar folder"));
-        assert!(warning.contains("Could not restore the last page"));
-        let failure = OpenNotebook::restore_on_disk(WorkspaceSession {
-            root: folder.clone(),
-            folder,
-            note: None,
-        });
-        assert!(matches!(failure, Err(error) if error.kind() == io::ErrorKind::NotFound));
-        Ok(())
-    }
 }

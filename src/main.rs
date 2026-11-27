@@ -6,6 +6,7 @@ mod editor;
 mod modal;
 mod note_history;
 mod notebook;
+mod notebook_index;
 mod notebook_menu;
 mod notebook_picker;
 mod page_width;

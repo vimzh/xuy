@@ -1,23 +1,18 @@
 //! The notebook's folder navigation and compact Markdown note index.
 
-use std::cmp::Reverse;
-use std::collections::HashMap;
-use std::io;
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use dioxus::prelude::{dioxus_core::use_drop, *};
-use time::{Date, OffsetDateTime, UtcOffset};
+use time::OffsetDateTime;
 
-use crate::notebook::{self, Entry};
-
-type FolderDetails = HashMap<PathBuf, io::Result<(SystemTime, Option<OffsetDateTime>)>>;
+use crate::notebook::Entry;
+use crate::notebook_index::{FolderIndex, local_today, modified_label, use_indexed_rows};
 
 #[component]
 pub(crate) fn WorkspaceSidebar(
     root: PathBuf,
-    entries: Signal<Vec<Entry>>,
+    index: FolderIndex,
     selected: Option<PathBuf>,
     busy: bool,
     on_browse: EventHandler<Entry>,
@@ -36,38 +31,8 @@ pub(crate) fn WorkspaceSidebar(
             }
         }
     });
-    let details = use_resource(move || {
-        let root = root.clone();
-        let listed = entries();
-        async move {
-            let active = Arc::new(());
-            let active_worker = Arc::downgrade(&active);
-            let details = tokio::task::spawn_blocking(move || {
-                listed
-                    .into_iter()
-                    .filter(|entry| !entry.is_dir)
-                    // Stop between files if a new folder replaces this resource.
-                    .take_while(|_| active_worker.strong_count() != 0)
-                    .map(|entry| {
-                        let details = notebook::note_modified(&root, &entry.path)
-                            .map(|modified| (modified, local_timestamp(modified)));
-                        (entry.path, details)
-                    })
-                    .collect::<FolderDetails>()
-            })
-            .await;
-            drop(active);
-            details
-        }
-    });
-    let details = details.read();
-    let details_error = details.as_ref().and_then(|value| value.as_ref().err());
-    let folder_details = details.as_ref().and_then(|value| value.as_ref().ok());
-    let entries = entries.read();
-    let mut ordered: Vec<_> = entries.iter().collect();
-    if let Some(details) = folder_details {
-        sort_by_date(&mut ordered, details);
-    }
+    let (rows, details_error) = use_indexed_rows(root, index);
+    let ordered = rows.read();
     let today = today();
 
     rsx! {
@@ -85,16 +50,17 @@ pub(crate) fn WorkspaceSidebar(
                 #[cfg(not(target_os = "macos"))]
                 let _ = event;
             },
-            if let Some(error) = details_error {
+            if let Some(error) = details_error() {
                 p { class: "sidebar-status", role: "status", title: "{error}", "Note details unavailable." }
             }
             if ordered.is_empty() {
                 p { class: "sidebar-status", "No Markdown notes or folders." }
             } else {
                 ul { class: "sidebar-entries",
-                    {ordered.into_iter().map(|entry| {
+                    {ordered.iter().map(|row| {
+                        let entry = &row.entry;
                         let active = selected.as_ref() == Some(&entry.path);
-                        let note = folder_details.and_then(|details| details.get(&entry.path));
+                        let note = row.time;
                         let name = if entry.is_dir {
                             entry.path.file_name()
                         } else {
@@ -117,7 +83,7 @@ pub(crate) fn WorkspaceSidebar(
                                     img { class: "sidebar-entry-icon", src: icon, alt: "" }
                                     span { class: "sidebar-entry-name", "{name}" }
                                     if let Some(note) = note {
-                                        if let Some(modified) = note.as_ref().ok().and_then(|(_, modified)| *modified) {
+                                        if let Some(modified) = note.local {
                                             {
                                                 let date = modified.date();
                                                 let hour = modified.hour();
@@ -171,80 +137,5 @@ pub(crate) fn SidebarDivider() -> Element {
                 }
             },
         }
-    }
-}
-
-fn sort_by_date(entries: &mut [&Entry], details: &FolderDetails) {
-    // Stable sort keeps the notebook's name order for folders and equal dates.
-    entries.sort_by_cached_key(|entry| {
-        let modified = details
-            .get(&entry.path)
-            .and_then(|result| result.as_ref().ok())
-            .map(|(modified, _)| *modified);
-        (!entry.is_dir, Reverse(modified))
-    });
-}
-
-fn local_today() -> Option<Date> {
-    OffsetDateTime::now_local().ok().map(OffsetDateTime::date)
-}
-
-fn local_timestamp(modified: SystemTime) -> Option<OffsetDateTime> {
-    let nanos = match modified.duration_since(UNIX_EPOCH) {
-        Ok(duration) => duration.as_nanos() as i128,
-        Err(error) => -(error.duration().as_nanos() as i128),
-    };
-    let utc = OffsetDateTime::from_unix_timestamp_nanos(nanos).ok()?;
-    let offset = UtcOffset::local_offset_at(utc).ok()?;
-    utc.checked_to_offset(offset)
-}
-
-fn modified_label(modified: OffsetDateTime, today: Option<Date>) -> String {
-    let date = modified.date();
-    if today == Some(date) {
-        return format!("{:02}:{:02}", modified.hour(), modified.minute());
-    }
-    format!(
-        "{:02}/{:02}/{:02}",
-        date.day(),
-        u8::from(date.month()),
-        date.year().rem_euclid(100)
-    )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn shows_local_time_until_midnight_then_shows_the_date() {
-        let date = Date::from_calendar_date(2026, time::Month::November, 27).unwrap();
-        let modified = date
-            .with_hms(0, 5, 0)
-            .unwrap()
-            .assume_offset(UtcOffset::from_hms(5, 30, 0).unwrap());
-        assert_eq!(modified_label(modified, Some(date)), "00:05");
-        assert_eq!(modified_label(modified, date.next_day()), "27/11/26");
-    }
-
-    #[test]
-    fn dates_sort_newest_first_after_folders_with_name_order_for_ties() {
-        let [folder, first, second, newest, missing] = ["folder", "a.md", "b.md", "c.md", "d.md"]
-            .map(|path| Entry {
-                path: path.into(),
-                is_dir: path == "folder",
-            });
-        let details = [(&first, 1), (&second, 1), (&newest, 2)]
-            .into_iter()
-            .map(|(entry, seconds)| {
-                (
-                    entry.path.clone(),
-                    Ok((UNIX_EPOCH + Duration::from_secs(seconds), None)),
-                )
-            })
-            .collect();
-        let mut entries = [&folder, &first, &second, &newest, &missing];
-        sort_by_date(&mut entries, &details);
-        assert_eq!(entries, [&folder, &newest, &first, &second, &missing]);
     }
 }
