@@ -8,32 +8,6 @@
     color: #202020;
 }
 
-.sidebar-toolbar {
-    display: flex;
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 5px;
-    min-height: 32px;
-    padding-inline: 11px;
-    border-bottom: 1px solid var(--workspace-rule);
-    font-size: 11px;
-}
-
-.sidebar-path {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    color: #626262;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.sidebar-sort {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
 .workspace .notebook-sidebar button {
     border: 0;
     border-radius: 0;
@@ -45,30 +19,9 @@
     background: #f0f0f0;
 }
 
-.workspace .notebook-sidebar :is(.sidebar-up, .sidebar-sort button) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 23px;
-    padding: 2px 4px;
-    color: #626262;
-}
-
-.workspace .notebook-sidebar .sidebar-up {
-    width: 23px;
-    margin-left: -4px;
-}
-
-.sidebar-up img,
 .sidebar-entry-icon {
     width: 15px;
     height: 15px;
-}
-
-.workspace .notebook-sidebar .sidebar-sort button[aria-pressed="true"] {
-    color: #202020;
-    text-decoration: underline;
-    text-underline-offset: 3px;
 }
 
 .sidebar-entries {

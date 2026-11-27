@@ -1,5 +1,7 @@
 //! The notebook title bar and its native macOS window controls.
 
+use std::path::PathBuf;
+
 use dioxus::desktop::use_window;
 use dioxus::prelude::*;
 use dioxus_elements::input_data::MouseButton;
@@ -14,6 +16,10 @@ pub(crate) fn NotebookChrome(
     sidebar_open: bool,
     can_back: bool,
     can_forward: bool,
+    folder: PathBuf,
+    parent: Option<PathBuf>,
+    busy: bool,
+    on_parent: EventHandler<PathBuf>,
     mut page_width: Signal<PageWidth>,
     preview: bool,
     can_preview: bool,
@@ -27,6 +33,10 @@ pub(crate) fn NotebookChrome(
     macos::use_titlebar(window.window.clone(), hidden);
 
     let icons = asset!("/assets/hugeicons", AssetOptions::folder());
+    let folder_name = folder
+        .file_name()
+        .unwrap_or(folder.as_os_str())
+        .to_string_lossy();
     let sidebar_label = if sidebar_open {
         "Hide sidebar"
     } else {
@@ -75,6 +85,21 @@ pub(crate) fn NotebookChrome(
                                 onclick: move |_| on_forward.call(()),
                                 img { src: "{icons}/arrow-right-01.svg", alt: "", width: "18", height: "18" }
                             }
+                        }
+                        div { class: "chrome-folder",
+                            if let Some(parent) = parent {
+                                button {
+                                    r#type: "button",
+                                    aria_label: "Up to parent folder",
+                                    title: "Up to parent folder",
+                                    disabled: busy,
+                                    onclick: move |_| on_parent.call(parent.clone()),
+                                    img { src: "{icons}/arrow-up-01.svg", alt: "", width: "14", height: "14" }
+                                }
+                            } else {
+                                img { src: "{icons}/folder-open.svg", alt: "", width: "14", height: "14" }
+                            }
+                            span { title: "{folder.display()}", "{folder_name}" }
                         }
                     }
                     div { class: "chrome-right", role: "group", aria_label: "Writing controls",

@@ -3,7 +3,7 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -12,29 +12,16 @@ use time::{Date, OffsetDateTime, UtcOffset};
 
 use crate::notebook::{self, Entry, NoteDetails};
 
-#[derive(Clone, Copy, PartialEq)]
-enum SortOrder {
-    Date,
-    Name,
-}
-
 type FolderDetails = HashMap<PathBuf, io::Result<(NoteDetails, Option<Date>)>>;
 
 #[component]
 pub(crate) fn WorkspaceSidebar(
     root: PathBuf,
-    directory: PathBuf,
     entries: Signal<Vec<Entry>>,
     selected: Option<PathBuf>,
     busy: bool,
     on_browse: EventHandler<Entry>,
 ) -> Element {
-    let relative = directory
-        .strip_prefix(&root)
-        .expect("directory must be in the notebook");
-    let location = format!("/{}", relative.display());
-    let parent = directory.parent().filter(|_| directory != root);
-    let mut sort_order = use_signal(|| SortOrder::Date);
     let details = use_resource(move || {
         let root = root.clone();
         let listed = entries();
@@ -66,46 +53,13 @@ pub(crate) fn WorkspaceSidebar(
     let folder_details = details.as_ref().and_then(|value| value.as_ref().ok());
     let entries = entries.read();
     let mut ordered: Vec<_> = entries.iter().collect();
-    let sort = sort_order();
-    if sort == SortOrder::Date
-        && let Some(details) = folder_details
-    {
+    if let Some(details) = folder_details {
         sort_by_date(&mut ordered, details);
     }
 
     rsx! {
         document::Stylesheet { href: asset!("/assets/sidebar.css") }
         aside { class: "notebook-sidebar", aria_label: "Notebook files",
-            div { class: "sidebar-toolbar",
-                if let Some(parent) = parent.map(Path::to_owned) {
-                    button {
-                        class: "sidebar-up",
-                        r#type: "button",
-                        title: "Up to parent folder",
-                        aria_label: "Up to parent folder",
-                        disabled: busy,
-                        onclick: move |_| on_browse.call(Entry { path: parent.clone(), is_dir: true }),
-                        img { src: asset!("/assets/hugeicons/arrow-up-01.svg"), alt: "" }
-                    }
-                }
-                span { class: "sidebar-path", title: "{location}", "{location}" }
-                div { class: "sidebar-sort", role: "group", aria_label: "Sort notes",
-                    button {
-                        r#type: "button",
-                        title: "Sort by last modified",
-                        aria_pressed: sort == SortOrder::Date,
-                        onclick: move |_| sort_order.set(SortOrder::Date),
-                        "Date"
-                    }
-                    button {
-                        r#type: "button",
-                        title: "Sort by name",
-                        aria_pressed: sort == SortOrder::Name,
-                        onclick: move |_| sort_order.set(SortOrder::Name),
-                        "Name"
-                    }
-                }
-            }
             if let Some(error) = details_error {
                 p { class: "sidebar-status", role: "status", title: "{error}", "Note details unavailable." }
             }

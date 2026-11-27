@@ -1,8 +1,10 @@
 .notebook-chrome {
     --chrome-top-inset: 9px;
+    --chrome-left-inset: 82px;
+    --chrome-title-inset: min(clamp(172px, 40vw, 264px), 50%);
     position: relative;
     /* The native traffic lights are centered 16px from the top. */
-    padding-block: var(--chrome-top-inset) 2px;
+    padding-block: var(--chrome-top-inset) 5px;
     font-size: 13px;
     user-select: none;
 }
@@ -35,7 +37,8 @@
 }
 
 .chrome-left,
-.chrome-history {
+.chrome-history,
+.chrome-folder {
     display: flex;
     align-items: center;
 }
@@ -48,13 +51,38 @@
 .chrome-left {
     position: relative;
     justify-self: start;
-    margin-left: 82px;
+    max-width: calc(var(--chrome-title-inset) - var(--chrome-left-inset) - 5px);
+    margin-inline-start: var(--chrome-left-inset);
     gap: 8px;
+}
+
+.chrome-left > button,
+.chrome-history,
+.chrome-folder > :is(img, button) {
+    flex: none;
+}
+
+.chrome-folder {
+    min-width: 0;
+    overflow: hidden;
+    gap: 4px;
+    color: #424242;
+    font-size: 11px;
+}
+
+.chrome-folder span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.workspace .notebook-chrome .chrome-folder button {
+    width: 16px;
 }
 
 .chrome-filename {
     position: absolute;
-    inset: var(--chrome-top-inset) min(176px, 50%) auto;
+    inset: var(--chrome-top-inset) var(--chrome-title-inset) auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -62,6 +90,10 @@
     color: #424242;
     line-height: 1;
     pointer-events: none;
+}
+
+.chrome-reveal ~ .chrome-filename {
+    inset-inline: 12px;
 }
 
 .chrome-filename-text {
@@ -168,20 +200,19 @@
 }
 
 @media (max-width: 520px) {
+    .notebook-chrome {
+        --chrome-left-inset: 76px;
+    }
+
     .chrome-sidebar-rule {
         display: none;
     }
 
     .chrome-left {
-        margin-left: 76px;
         gap: 4px;
     }
 
     .workspace .notebook-chrome button {
         width: 22px;
-    }
-
-    .chrome-filename {
-        inset-inline: min(150px, 50%);
     }
 }

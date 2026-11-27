@@ -250,6 +250,11 @@ pub(crate) fn Workspace(
     let can_forward = !busy() && history.read().destination(1).is_some();
     let can_preview = !busy() && selected.read().is_some();
     let columns = page_width().columns();
+    let folder = directory();
+    let parent = folder
+        .parent()
+        .filter(|_| folder != *root.peek())
+        .map(Path::to_owned);
 
     rsx! {
         document::Stylesheet { href: asset!("/assets/workspace.css") }
@@ -271,6 +276,8 @@ pub(crate) fn Workspace(
             },
             NotebookChrome {
                 filename, dirty: dirty(), hidden: chrome_hidden, sidebar_open: sidebar_open(), can_back, can_forward,
+                folder, parent, busy: busy(),
+                on_parent: move |path| browse(Entry { path, is_dir: true }, None),
                 page_width, preview: preview(), can_preview, on_preview: toggle_preview,
                 on_toggle: move |_| {
                     let next = !*sidebar_open.peek();
@@ -283,7 +290,6 @@ pub(crate) fn Workspace(
                 div { id: "workspace-sidebar", class: "workspace-sidebar", hidden: !sidebar_open(),
                     WorkspaceSidebar {
                         root: root.peek().clone(),
-                        directory: directory(),
                         entries,
                         selected: selected(),
                         busy: busy(),
