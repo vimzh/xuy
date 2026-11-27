@@ -16,17 +16,17 @@ Open a folder on macOS or Linux and start writing. xuy reads notes on demand, re
 
 ## Install
 
-| Platform | v0.1.0 download |
+| Platform | v0.1.1 download |
 | --- | --- |
-| macOS 14.5+, Apple Silicon | [Apple Silicon DMG](https://github.com/vimzh/xuy/releases/download/v0.1.0/xuy-0.1.0-macos-arm64.dmg) |
-| macOS 14.5+, Intel | [Intel DMG](https://github.com/vimzh/xuy/releases/download/v0.1.0/xuy-0.1.0-macos-x86_64.dmg) |
-| Ubuntu 24.04, x86-64 | [Linux DEB](https://github.com/vimzh/xuy/releases/download/v0.1.0/xuy-0.1.0-linux-amd64.deb) |
+| macOS 14.5+, Apple Silicon | [Apple Silicon DMG](https://github.com/vimzh/xuy/releases/download/v0.1.1/xuy-0.1.1-macos-arm64.dmg) |
+| macOS 14.5+, Intel | [Intel DMG](https://github.com/vimzh/xuy/releases/download/v0.1.1/xuy-0.1.1-macos-x86_64.dmg) |
+| Ubuntu 24.04, x86-64 | [Linux DEB](https://github.com/vimzh/xuy/releases/download/v0.1.1/xuy-0.1.1-linux-amd64.deb) |
 
 **macOS.** Open the DMG and drag **Xuy** into **Applications**. The app uses an ad hoc signature and is unnotarized. If macOS blocks the first launch, see [Apple’s instructions for opening the app](https://support.apple.com/en-us/102445).
 
-**Linux.** From your download directory, run `sudo apt install ./xuy-0.1.0-linux-amd64.deb`. The Linux build is a preview. Notes persist on disk, and saved notebook shortcuts and several preferences reset when you relaunch. Session restore and the performance panel are currently macOS-only.
+**Linux.** From your download directory, run `sudo apt install ./xuy-0.1.1-linux-amd64.deb`. The Linux build is a preview. Notes persist on disk, and saved notebook shortcuts and several preferences reset when you relaunch. Session restore and the performance panel are currently macOS-only.
 
-[Release notes](https://github.com/vimzh/xuy/releases/tag/v0.1.0) · [SHA-256 checksums](https://github.com/vimzh/xuy/releases/download/v0.1.0/SHA256SUMS)
+[Release notes](https://github.com/vimzh/xuy/releases/tag/v0.1.1) · [SHA-256 checksums](https://github.com/vimzh/xuy/releases/download/v0.1.1/SHA256SUMS)
 
 ## Start writing
 
