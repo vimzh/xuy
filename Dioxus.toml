@@ -7,4 +7,5 @@ icon = ["assets/xuy.icns", "assets/xuy.png"]
 minimum_system_version = "14.5"
 
 [bundle.deb]
-depends = ["libgtk-3-0", "libwebkit2gtk-4.1-0", "libxdo3"]
+depends = ["libgtk-3-0", "libwebkit2gtk-4.1-0", "libxdo3", "xdg-desktop-portal"]
+recommends = ["xdg-desktop-portal-gtk"]
