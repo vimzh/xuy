@@ -1145,9 +1145,13 @@ dependencies = [
 name = "dojo"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "dioxus",
+ "libc",
+ "linkify",
  "objc2-app-kit",
  "objc2-foundation",
+ "percent-encoding",
  "pulldown-cmark",
  "rfd",
  "tempfile",
@@ -2319,6 +2323,15 @@ checksum = "db23b9e7e2b7831bbd8aac0bbeeeb7b68cbebc162b227e7052e8e55829a09212"
 dependencies = [
  "libc",
  "x11",
+]
+
+[[package]]
+name = "linkify"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "92f9ae2f3d31697697311f016320fe984127e636b45cf5eb5c175b7eb103dadb"
+dependencies = [
+ "memchr",
 ]
 
 [[package]]

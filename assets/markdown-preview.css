@@ -1,0 +1,40 @@
+.markdown-preview img {
+    display: inline-block;
+    max-inline-size: 100%;
+    block-size: auto;
+    vertical-align: middle;
+}
+
+.markdown-preview table {
+    display: block;
+    max-inline-size: 100%;
+    overflow: auto;
+    border-collapse: collapse;
+}
+
+.markdown-preview :is(h4, h5, h6) {
+    margin-block: .85em .45em;
+    font-size: 1em;
+    line-height: 1.3;
+}
+
+.markdown-preview [id] {
+    scroll-margin-block-start: .75em;
+}
+
+.markdown-preview .footnote-definition {
+    color: var(--muted);
+    font-size: .9em;
+}
+
+.markdown-preview dt {
+    font-weight: 600;
+}
+
+.markdown-preview dd {
+    margin-inline-start: 1.25em;
+}
+
+.markdown-preview .markdown-alert-title {
+    font-weight: 600;
+}

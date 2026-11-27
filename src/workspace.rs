@@ -13,6 +13,8 @@ use tokio::{
 use crate::chrome::NotebookChrome;
 use crate::commands::{self, PageActions};
 use crate::editor::Editor;
+use crate::markdown_paths::MarkdownPaths;
+use crate::markdown_preview::PreviewTarget;
 use crate::note_history::NoteHistory;
 use crate::notebook::{self, Entry};
 use crate::notebook_index::{NoteTime, use_folder_index};
@@ -55,6 +57,7 @@ pub(crate) fn Workspace(
     let mut failed_edit = use_signal(|| None::<Instant>);
     let mut saving = use_signal(|| false);
     let mut preview = use_signal(|| false);
+    let mut preview_anchor = use_signal(|| None::<String>);
     let mut sidebar_open = use_signal(|| true);
     let mut chrome_hidden = use_signal(|| false);
     let mut history = use_signal(|| {
@@ -133,6 +136,7 @@ pub(crate) fn Workspace(
                     }
                     selected.set(Some(path));
                     remember_location.set(true);
+                    preview_anchor.set(None);
                     preview.set(false);
                     chrome_hidden.set(false);
                     naming.set(None);
@@ -141,6 +145,47 @@ pub(crate) fn Workspace(
             }
         }
         busy.set(false);
+    };
+
+    let open_preview_link = move |(target, wiki): PreviewTarget| async move {
+        if *busy.peek() || *modal_open.peek() || !*preview.peek() {
+            return;
+        }
+        let Some(origin) = selected.peek().clone() else {
+            return;
+        };
+        let paths = MarkdownPaths::new(root.peek().clone(), origin.clone());
+        let resolved = on_disk(move || paths.resolve_note(&target, wiki)).await;
+        if *busy.peek() || !*preview.peek() || selected.peek().as_ref() != Some(&origin) {
+            return;
+        }
+        match resolved {
+            Ok((path, fragment)) => {
+                if path != origin {
+                    browse(
+                        Entry {
+                            path: path.clone(),
+                            is_dir: false,
+                        },
+                        None,
+                    )
+                    .await;
+                }
+                if selected.peek().as_ref() == Some(&path) {
+                    error.set(None);
+                    let fragment = fragment.map(|fragment| {
+                        if wiki {
+                            crate::markdown::heading_slug(&fragment)
+                        } else {
+                            fragment
+                        }
+                    });
+                    preview_anchor.set(fragment);
+                    preview.set(true);
+                }
+            }
+            Err(failure) => error.set(Some(failure.to_string())),
+        }
     };
 
     let move_history = move |offset| async move {
@@ -198,6 +243,7 @@ pub(crate) fn Workspace(
                             history.write().visit(&path);
                             selected.set(Some(path));
                             remember_location.set(true);
+                            preview_anchor.set(None);
                             preview.set(false);
                         }
                         chrome_hidden.set(false);
@@ -296,6 +342,7 @@ pub(crate) fn Workspace(
     let mut toggle_preview = move |_| {
         if !*busy.peek() && selected.peek().is_some() {
             let next = !*preview.peek();
+            preview_anchor.set(None);
             preview.set(next);
             chrome_hidden.set(false);
         }
@@ -451,6 +498,8 @@ pub(crate) fn Workspace(
                     if let Some(path) = selected() {
                         Editor { key: "{path:?}",
                             draft, dirty, preview, chrome_hidden, busy: (busy() && !saving()) || modal_open(),
+                            paths: MarkdownPaths::new(root.peek().clone(), path), preview_anchor,
+                            on_preview_open: open_preview_link,
                             on_edit: move |text| {
                                 draft.set(text);
                                 last_edit.set(Some(Instant::now()));
