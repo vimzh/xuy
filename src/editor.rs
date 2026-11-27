@@ -222,7 +222,11 @@ fn MarkdownInput(
                 aria_keyshortcuts: "Meta+S Shift+F10",
                 readonly: busy,
                 value: "{draft}",
-                onmounted: move |_| tracker.set(Some(document::eval(include_str!("editor_caret.js")))),
+                onmounted: move |_| tracker.set(Some(document::eval(concat!(
+                    include_str!("editor/code_blocks.js"),
+                    "\n",
+                    include_str!("editor_caret.js"),
+                )))),
                 ondrop: move |event| {
                     if event.data_transfer().files().is_empty() {
                         return;
@@ -261,6 +265,7 @@ fn MarkdownInput(
                 span { class: "note-custom-caret", hidden: true }
             }
             {format_menu}
+            p { class: "workspace-error note-code-block-error", role: "alert", hidden: true }
             if let Some(error) = image_error() {
                 p { class: "workspace-error", role: "alert", "{error}" }
             }

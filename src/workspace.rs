@@ -567,7 +567,11 @@ pub(crate) fn Workspace(
         }
         commands::INSERT_CODE_BLOCK if selected.peek().is_some() && !*busy.peek() => {
             spawn(async move {
-                let mut edit = document::eval(include_str!("editor/insert_code_block.js"));
+                let mut edit = document::eval(concat!(
+                    include_str!("editor/code_blocks.js"),
+                    "\n",
+                    include_str!("editor/insert_code_block.js"),
+                ));
                 let result = edit.recv::<Option<String>>().await;
                 let _ = edit.send(());
                 match result {

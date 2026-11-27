@@ -30,7 +30,9 @@ You can also right-click the sidebar, or press `⇧F10` with it focused, and cho
 
 In Edit or Side by Side, select text and right-click it, or press `⇧F10` with the selection active. Choose **Bold**, **Italic**, **Strikethrough**, or a highlight color.
 
-In Edit or Side by Side, use **Insert Code Block** in `⌘K` to add a fenced Markdown block at the cursor or wrap selected text. Add a language name such as `rust` or `python` after the opening backticks for syntax highlighting in Preview. Set **Code Block Theme** to **System**, **Paper**, or **Graphite** in Settings or `⌘K`.
+In Edit or Side by Side, type `/code` on its own line and press Enter or Tab. xuy inserts a fenced Markdown block and places the cursor inside it. Press Up on the first code row or Down on the last to jump past the fence and continue writing.
+
+Use **Insert Code Block** in `⌘K` to insert a block at the cursor or wrap selected text. Add a language name such as `rust` or `python` after the opening backticks for syntax highlighting in Preview. Set **Code Block Theme** to **System**, **Paper**, or **Graphite** in Settings or `⌘K`.
 
 The title bar and filename hide when you type, and the text stays in place. Move focus out of the editor, press `Esc`, or move the pointer to the top of the window to bring the title bar back. If you switch notes or return home with unsaved edits, **Keep editing** returns you to your draft. **Discard changes** continues without saving it.
 

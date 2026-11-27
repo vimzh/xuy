@@ -167,6 +167,12 @@ function readHighlights() {
     if (!highlightRanges.length) highlightLayer.replaceChildren();
 }
 
+function offsetTop(offset) {
+    range.setStart(text, offset);
+    range.collapse(true);
+    return range.getBoundingClientRect().top - mirror.getBoundingClientRect().top;
+}
+
 function jump(start, end) {
     if (frame.hidden) {
         // A highlight chosen in Preview can arrive before Edit is visible.
@@ -175,9 +181,7 @@ function jump(start, end) {
     }
     if (editor.readOnly || composing || end > editor.value.length) return;
     syncMirror();
-    range.setStart(text, start);
-    range.collapse(true);
-    const y = range.getBoundingClientRect().top - mirror.getBoundingClientRect().top;
+    const y = offsetTop(start);
     editor.focus({ preventScroll: true });
     editor.setSelectionRange(start, end);
     if (y < editor.scrollTop || y + 24 > editor.scrollTop + editor.clientHeight) {
@@ -230,6 +234,10 @@ try {
     listen(editor, "scroll", () => queue(false, true));
     listen(editor, "compositionstart", () => { composing = true; editor.dataset.composing = "true"; hide(); });
     listen(editor, "compositionend", () => { composing = false; delete editor.dataset.composing; queue(true); });
+    installCodeBlockKeys(editor, listen, offset => {
+        syncMirror();
+        return offsetTop(offset);
+    }, jump);
     // Older WebKit versions dispatch textarea selection changes on the document.
     listen(document, "selectionchange", () => queue(true));
     listen(document, "visibilitychange", () => queue(true));
