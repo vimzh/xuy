@@ -1,3 +1,7 @@
+.markdown-preview {
+    outline: none;
+}
+
 .markdown-preview img {
     display: inline-block;
     max-inline-size: 100%;
