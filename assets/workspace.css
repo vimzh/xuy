@@ -109,15 +109,6 @@
     outline-offset: -1px;
 }
 
-.workspace-sidebar-divider:is(:hover, [data-resizing])::before {
-    content: "";
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: 5px;
-    width: 2px;
-    background: var(--focus);
-}
-
 .workspace[data-sidebar-open="false"] #workspace-sidebar-divider {
     display: none;
 }

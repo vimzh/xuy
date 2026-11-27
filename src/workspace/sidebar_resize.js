@@ -65,7 +65,6 @@ function syncRange() {
 }
 
 function setResizing(active) {
-    divider.toggleAttribute("data-resizing", active);
     if (!right) workspace.toggleAttribute("data-sidebar-resizing", active);
 }
 
