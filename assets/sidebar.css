@@ -31,7 +31,6 @@
 
 .sidebar-entries li {
     padding-block: 1px;
-    border-bottom: 1px solid var(--workspace-rule);
 }
 
 .workspace .notebook-sidebar .sidebar-entry {
