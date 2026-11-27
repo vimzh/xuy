@@ -16,6 +16,7 @@ pub(crate) fn NotebookChrome(
     dirty: bool,
     mut hidden: Signal<bool>,
     sidebar_open: bool,
+    writing_sidebar_open: Option<bool>,
     can_back: bool,
     can_forward: bool,
     folder: PathBuf,
@@ -27,6 +28,7 @@ pub(crate) fn NotebookChrome(
     can_preview: bool,
     on_view_mode: EventHandler<ViewMode>,
     on_toggle: EventHandler<()>,
+    on_toggle_writing_sidebar: EventHandler<()>,
     on_back: EventHandler<()>,
     on_forward: EventHandler<()>,
 ) -> Element {
@@ -45,6 +47,11 @@ pub(crate) fn NotebookChrome(
         "Show sidebar"
     };
     let chrome_hidden = hidden();
+    let writing_sidebar_label = if writing_sidebar_open == Some(true) {
+        "Hide right sidebar"
+    } else {
+        "Show right sidebar"
+    };
 
     rsx! {
         document::Stylesheet { href: asset!("/assets/chrome.css") }
@@ -131,6 +138,16 @@ pub(crate) fn NotebookChrome(
                                     option { key: "{value}", value, selected: view_mode == mode, "{label}" }
                                 }
                             }
+                        }
+                        button {
+                            r#type: "button",
+                            aria_label: writing_sidebar_label,
+                            aria_expanded: writing_sidebar_open,
+                            aria_controls: writing_sidebar_open.map(|_| "writing-sidebar"),
+                            title: writing_sidebar_label,
+                            disabled: writing_sidebar_open.is_none(),
+                            onclick: move |_| on_toggle_writing_sidebar.call(()),
+                            img { class: "chrome-right-sidebar-icon", src: "{icons}/sidebar-left.svg", alt: "" }
                         }
                     }
                     div { class: "chrome-filename",

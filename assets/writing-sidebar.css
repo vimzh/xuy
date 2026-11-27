@@ -1,29 +1,17 @@
-.workspace-content {
-    container-type: inline-size;
-}
-
-.note-writing {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(10rem, 20cqw, 12rem);
-    grid-template-areas: "editor tools";
-    gap: clamp(10px, 3cqw, 28px);
-    flex: 1;
-    min-height: 0;
-}
-
-.note-editor {
-    grid-area: editor;
-    justify-self: center;
-}
-
 .writing-sidebar {
     grid-area: tools;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
     min-height: 0;
     min-width: 0;
-    gap: 8px;
+    padding: 5px 6px;
+    border-inline-start: 1px solid var(--workspace-rule);
+    background: var(--sidebar-surface);
     font-size: 12px;
+}
+
+.writing-sidebar[hidden] {
+    display: none;
 }
 
 .writing-modes {
@@ -34,8 +22,9 @@
 
 .writing-tools-view {
     min-height: 0;
-    padding: 2px;
+    padding-block-start: 4px;
     overflow: auto;
+    scrollbar-width: none;
 }
 
 .workspace .writing-sidebar button {
@@ -81,6 +70,8 @@
 
 .workspace .note-outline button {
     width: 100%;
+    min-height: 28px;
+    text-align: left;
     overflow-wrap: anywhere;
 }
 
@@ -137,16 +128,10 @@
     .xuy-lavender { background-color: #4a3d65; }
 }
 
-@container (max-width: 560px) {
-    .note-writing {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: auto minmax(0, 1fr);
-        grid-template-areas: "tools" "editor";
-        gap: 8px;
-    }
-
+@media (max-width: 720px) {
     .writing-sidebar {
-        gap: 2px;
+        border-inline-start: 0;
+        border-block-end: 1px solid var(--workspace-rule);
     }
 
     .writing-tools-view {

@@ -6,6 +6,7 @@ use crate::{highlight::Color, note_status::NoteSummary};
 
 #[component]
 pub(crate) fn WritingSidebar(
+    open: bool,
     summary: Memo<NoteSummary>,
     preview: bool,
     busy: bool,
@@ -15,7 +16,7 @@ pub(crate) fn WritingSidebar(
 ) -> Element {
     let mut show_highlights = use_signal(|| false);
     rsx! {
-        aside { class: "writing-sidebar", aria_label: "Note tools",
+        aside { id: "writing-sidebar", class: "writing-sidebar", aria_label: "Note tools", hidden: !open,
             div { class: "writing-modes", role: "group", aria_label: "Note tools view",
                 button { r#type: "button", aria_pressed: !show_highlights(),
                     aria_controls: "writing-tools-view", onclick: move |_| show_highlights.set(false), "Outline" }

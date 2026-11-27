@@ -1,6 +1,5 @@
 //! The open folder's sidebar entries and modification times.
 
-use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -37,16 +36,15 @@ impl FolderIndex {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct NoteTime {
-    modified: Option<SystemTime>,
     pub(crate) local: Option<OffsetDateTime>,
 }
 
 impl NoteTime {
     pub(crate) fn read(root: &Path, path: &Path) -> Self {
-        let modified = notebook::note_modified(root, path).ok();
         Self {
-            modified,
-            local: modified.and_then(local_timestamp),
+            local: notebook::note_modified(root, path)
+                .ok()
+                .and_then(local_timestamp),
         }
     }
 }
@@ -89,7 +87,7 @@ pub(crate) fn use_indexed_rows(
     let rows = use_memo(move || {
         let loaded = details.read();
         let times = loaded.as_ref().and_then(|result| result.as_ref().ok());
-        ordered_rows(&index.entries.read(), times, &index.saved_times.read())
+        indexed_rows(&index.entries.read(), times, &index.saved_times.read())
     });
     let error = use_memo(move || {
         details
@@ -100,12 +98,12 @@ pub(crate) fn use_indexed_rows(
     (rows, error)
 }
 
-fn ordered_rows(
+fn indexed_rows(
     entries: &[Entry],
     loaded: Option<&NoteTimes>,
     saved: &NoteTimes,
 ) -> Vec<IndexedEntry> {
-    let mut rows: Vec<_> = entries
+    entries
         .iter()
         .cloned()
         .map(|entry| {
@@ -115,17 +113,7 @@ fn ordered_rows(
                 .copied();
             IndexedEntry { entry, time }
         })
-        .collect();
-    if loaded.is_some() || !saved.is_empty() {
-        // Keep the folder listing's name order when modification times match.
-        rows.sort_by_key(|row| {
-            (
-                !row.entry.is_dir,
-                Reverse(row.time.and_then(|time| time.modified)),
-            )
-        });
-    }
-    rows
+        .collect()
 }
 
 pub(crate) fn local_today() -> Option<Date> {
@@ -158,7 +146,6 @@ pub(crate) fn modified_label(modified: OffsetDateTime, today: Option<Date>) -> S
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
 
     #[test]
     fn shows_local_time_until_midnight_then_shows_the_date() {
@@ -172,38 +159,21 @@ mod tests {
     }
 
     #[test]
-    fn orders_saved_pages_by_their_new_time_without_reloading_other_notes() {
-        let entries = ["folder", "a.md", "b.md", "c.md", "d.md"].map(|name| Entry {
+    fn updates_timestamps_without_reordering_pages() {
+        let entries = ["folder", "a.md", "b.md", "c.md"].map(|name| Entry {
             path: name.into(),
             is_dir: name == "folder",
         });
         let timestamp = |seconds| NoteTime {
-            modified: Some(UNIX_EPOCH + Duration::from_secs(seconds)),
-            local: None,
+            local: OffsetDateTime::from_unix_timestamp(seconds).ok(),
         };
-        let loaded = HashMap::from([
-            ("a.md".into(), timestamp(1)),
-            ("b.md".into(), timestamp(1)),
-            ("c.md".into(), timestamp(2)),
-        ]);
+        let loaded = HashMap::from([("a.md".into(), timestamp(2)), ("b.md".into(), timestamp(1))]);
         let saved = HashMap::from([("b.md".into(), timestamp(3))]);
-        let names = |rows: Vec<IndexedEntry>| {
-            rows.into_iter()
-                .map(|row| row.entry.path)
-                .collect::<Vec<_>>()
-        };
-        let expected = |names: [&str; 5]| names.map(PathBuf::from);
-        assert_eq!(
-            names(ordered_rows(&entries, Some(&loaded), &NoteTimes::new())),
-            expected(["folder", "c.md", "a.md", "b.md", "d.md"])
-        );
-        assert_eq!(
-            names(ordered_rows(&entries, Some(&loaded), &saved)),
-            expected(["folder", "b.md", "c.md", "a.md", "d.md"])
-        );
-        assert_eq!(
-            names(ordered_rows(&entries, None, &saved)),
-            expected(["folder", "b.md", "a.md", "c.md", "d.md"])
-        );
+        for times in [None, Some(&loaded)] {
+            let rows = indexed_rows(&entries, times, &saved);
+            assert!(rows.iter().map(|row| &row.entry).eq(&entries));
+            assert_eq!(rows[1].time, times.map(|_| timestamp(2)));
+            assert_eq!(rows[2].time, Some(timestamp(3)));
+        }
     }
 }

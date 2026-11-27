@@ -72,6 +72,7 @@ pub(crate) fn Workspace(
     let mut view_mode = use_signal(ViewMode::default);
     let mut preview_anchor = use_signal(|| None::<String>);
     let mut sidebar_open = use_signal(|| true);
+    let mut writing_sidebar_open = use_signal(|| true);
     let mut chrome_hidden = use_signal(|| false);
     let mut history = use_signal(|| {
         let mut history = NoteHistory::default();
@@ -629,12 +630,58 @@ pub(crate) fn Workspace(
         .filter(|_| folder != *root.peek())
         .map(Path::to_owned);
 
+    let has_note = selected.read().is_some();
+    let note_tools_open = writing_sidebar_open();
+    let notices = rsx! {
+        if let Some(message) = error() {
+            p { class: "workspace-error", role: "alert", "{message}" }
+        }
+        if let Some(message) = watch_error() {
+            p { class: "workspace-error", role: "status", "{message}" }
+        }
+        if let Some(message) = disk_error() {
+            p { class: "workspace-error", role: "status", "{message}" }
+        }
+        if let Some(current) = conflict() {
+            ExternalEditNotice { conflict: current, busy: busy(), on_reload: reload_external, on_save_copy: save_external_copy }
+        }
+        if confirmation.read().is_some() {
+            div { class: "unsaved-choice",
+                span { role: "alert", "Discard unsaved changes?" }
+                button {
+                    onmounted: move |event| async move { let _ = event.set_focus(true).await; },
+                    onclick: move |_| resolve_confirmation(false),
+                    "Keep editing"
+                }
+                button { onclick: move |_| resolve_confirmation(true), "Discard changes" }
+            }
+        }
+        if let Some(kind) = naming() {
+            form { key: "{kind as u8}", class: "new-note", onsubmit: create,
+                label { r#for: "entry-name",
+                    if kind == NewEntry::Note { "Note name" } else { "Folder name" }
+                }
+                input {
+                    id: "entry-name",
+                    value: "{name}",
+                    required: true,
+                    disabled: busy(),
+                    onmounted: move |event| async move { let _ = event.set_focus(true).await; },
+                    oninput: move |event| name.set(event.value()),
+                }
+                button { r#type: "submit", disabled: busy(), "Create" }
+                button { r#type: "button", disabled: busy(), onclick: move |_| naming.set(None), "Cancel" }
+            }
+        }
+    };
+
     rsx! {
         document::Stylesheet { href: asset!("/assets/workspace.css") }
         document::Stylesheet { href: asset!("/assets/terminal.css") }
         main {
             class: "workspace",
             "data-sidebar-open": sidebar_open(),
+            "data-writing-sidebar-open": has_note && note_tools_open,
             "data-code-theme": writing_style.code_theme(),
             style: "--editor-page-width: {columns}ch; --markdown-font-size: {markdown_font}px; --writing-font: {font_family}; --writing-code-font: {code_font}; --writing-line-height: {line_height}; --ui-zoom: {zoom}",
             aria_busy: busy() && confirmation.read().is_none(),
@@ -656,6 +703,8 @@ pub(crate) fn Workspace(
                 on_parent: move |path| browse(Entry { path, is_dir: true }, None, ViewMode::Edit),
                 page_width, view_mode: view_mode(), can_preview, on_view_mode: change_view,
                 on_toggle: toggle_sidebar,
+                writing_sidebar_open: has_note.then_some(note_tools_open),
+                on_toggle_writing_sidebar: move |_| writing_sidebar_open.toggle(),
                 on_back: move |_| move_history(-1),
                 on_forward: move |_| move_history(1),
             }
@@ -675,46 +724,6 @@ pub(crate) fn Workspace(
                 }
                 SidebarDivider {}
                 div { class: "workspace-content",
-                    if let Some(message) = error() {
-                        p { class: "workspace-error", role: "alert", "{message}" }
-                    }
-                    if let Some(message) = watch_error() {
-                        p { class: "workspace-error", role: "status", "{message}" }
-                    }
-                    if let Some(message) = disk_error() {
-                        p { class: "workspace-error", role: "status", "{message}" }
-                    }
-                    if let Some(current) = conflict() {
-                        ExternalEditNotice { conflict: current, busy: busy(), on_reload: reload_external, on_save_copy: save_external_copy }
-                    }
-                    if confirmation.read().is_some() {
-                        div { class: "unsaved-choice",
-                            span { role: "alert", "Discard unsaved changes?" }
-                            button {
-                                onmounted: move |event| async move { let _ = event.set_focus(true).await; },
-                                onclick: move |_| resolve_confirmation(false),
-                                "Keep editing"
-                            }
-                            button { onclick: move |_| resolve_confirmation(true), "Discard changes" }
-                        }
-                    }
-                    if let Some(kind) = naming() {
-                        form { key: "{kind as u8}", class: "new-note", onsubmit: create,
-                            label { r#for: "entry-name",
-                                if kind == NewEntry::Note { "Note name" } else { "Folder name" }
-                            }
-                            input {
-                                id: "entry-name",
-                                value: "{name}",
-                                required: true,
-                                disabled: busy(),
-                                onmounted: move |event| async move { let _ = event.set_focus(true).await; },
-                                oninput: move |event| name.set(event.value()),
-                            }
-                            button { r#type: "submit", disabled: busy(), "Create" }
-                            button { r#type: "button", disabled: busy(), onclick: move |_| naming.set(None), "Cancel" }
-                        }
-                    }
                     if let Some(path) = selected() {
                         Editor { key: "{path:?}",
                             draft, dirty, view_mode, edit_in_preview, chrome_hidden, busy: (busy() && !saving()) || modal_open(), summary,
@@ -726,9 +735,15 @@ pub(crate) fn Workspace(
                             },
                             on_save: move |_| save(None),
                             cursor: cursor().unwrap_or_default(),
+                            notices, writing_sidebar_open: note_tools_open,
                         }
-                    } else if naming().is_none() {
-                        p { class: "workspace-message", "Select a Markdown note." }
+                    } else {
+                        div { class: "workspace-writing",
+                            {notices}
+                            if naming().is_none() {
+                                p { class: "workspace-message", "Select a Markdown note." }
+                            }
+                        }
                     }
                 }
             }

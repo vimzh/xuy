@@ -5,7 +5,10 @@
     --chrome-gap: clamp(4px, 1.2vw, 8px);
     --chrome-history-gap: 2px;
     --chrome-left-controls: calc(var(--chrome-left-inset) + 4 * var(--chrome-control-size) + 2 * var(--chrome-gap) + var(--chrome-history-gap));
-    --chrome-right-min: calc(2 * var(--chrome-control-size) + 15px);
+    --chrome-writing-gap: 6px;
+    --chrome-right-inset: 9px;
+    --chrome-writing-controls: calc(3 * var(--chrome-control-size) + 2 * var(--chrome-writing-gap) + var(--chrome-right-inset));
+    --chrome-right-min: max(var(--chrome-writing-controls), var(--writing-sidebar-track));
     --chrome-free-space: calc(100vw - var(--chrome-left-controls) - var(--chrome-right-min));
     --chrome-title-gap: clamp(0px, (var(--chrome-free-space) - 1.5rem) / 2, 6px);
     /* Reserve some folder space before sizing the filename. */
@@ -36,6 +39,18 @@
     inset-block: 0;
     inset-inline-start: 0;
     width: var(--sidebar-track);
+    background: var(--sidebar-surface);
+    pointer-events: none;
+}
+
+:is(.chrome-drag, .chrome-reveal)::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    box-sizing: border-box;
+    width: var(--writing-sidebar-track);
+    border-inline-start: min(1px, var(--writing-sidebar-track)) solid var(--workspace-rule);
     background: var(--sidebar-surface);
     pointer-events: none;
 }
@@ -186,8 +201,19 @@
     justify-self: end;
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-inline-end: 9px;
+    gap: var(--chrome-writing-gap);
+    margin-inline-end: var(--chrome-right-inset);
+}
+
+.chrome-right-sidebar-icon {
+    transform: scaleX(-1);
+}
+
+@media (max-width: 300px) {
+    .notebook-chrome {
+        --chrome-writing-gap: 2px;
+        --chrome-right-inset: 4px;
+    }
 }
 
 @media (max-width: 520px) {

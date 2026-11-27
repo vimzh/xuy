@@ -66,11 +66,7 @@ pub(crate) fn WorkspaceSidebar(
                         let entry = &row.entry;
                         let active = selected.as_ref() == Some(&entry.path);
                         let note = row.time;
-                        let name = if entry.is_dir {
-                            entry.path.file_name()
-                        } else {
-                            entry.path.file_stem()
-                        }.unwrap_or(entry.path.as_os_str()).to_string_lossy();
+                        let name = entry.name().to_string_lossy();
                         let icon = if entry.is_dir {
                             asset!("/assets/hugeicons/notebook-01.svg")
                         } else {

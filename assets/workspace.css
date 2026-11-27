@@ -5,6 +5,9 @@
     --sidebar-width: clamp(var(--sidebar-min-width), var(--sidebar-preferred-width, var(--sidebar-default-width)), var(--sidebar-max-width));
     --sidebar-track: var(--sidebar-width);
     --sidebar-motion: 260ms cubic-bezier(.22, .8, .2, 1);
+    /* The title bar and note tools use the same column width. */
+    --writing-sidebar-width: clamp(11rem, 18vw, 13rem);
+    --writing-sidebar-track: 0px;
     position: fixed;
     inset: 0;
     display: grid;
@@ -16,6 +19,10 @@
 
 .workspace[data-sidebar-open="false"] {
     --sidebar-track: 0px;
+}
+
+.workspace[data-writing-sidebar-open="true"] {
+    --writing-sidebar-track: var(--writing-sidebar-width);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -114,7 +121,17 @@
     transition: none;
 }
 
-.workspace-content,
+.workspace-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--writing-sidebar-track);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "editor tools";
+    min-width: 0;
+    min-height: 0;
+    background: var(--paper);
+}
+
+.workspace-writing,
 .note-editor {
     min-height: 0;
     display: flex;
@@ -122,24 +139,20 @@
     flex: 1;
 }
 
-.workspace-content {
+.workspace-writing {
+    grid-area: editor;
     min-width: 0;
     padding: clamp(10px, 3vh, 32px) clamp(12px, 5vw, 56px);
     overflow: auto;
-    background: var(--paper);
 }
 
-.workspace-content > * {
+.workspace-writing > * {
     box-sizing: border-box;
     width: min(100%, 60ch);
     margin-inline: auto;
 }
 
-.workspace-content > .note-writing {
-    width: 100%;
-}
-
-.note-editor {
+.workspace-writing > .note-editor {
     width: min(100%, var(--editor-page-width, 60ch));
     font-family: var(--writing-font);
     font-size: var(--markdown-font-size);
@@ -224,11 +237,11 @@
     line-height: var(--writing-line-height);
 }
 
-:is(.workspace-content, .note-input, .markdown-preview) {
+:is(.workspace-writing, .note-input, .markdown-preview) {
     scrollbar-width: none;
 }
 
-:is(.workspace-content, .note-input, .markdown-preview)::-webkit-scrollbar {
+:is(.workspace-writing, .note-input, .markdown-preview)::-webkit-scrollbar {
     display: none;
 }
 
@@ -383,5 +396,17 @@
         max-width: none;
         border-right: 0;
         border-bottom: 1px solid var(--workspace-rule);
+    }
+}
+
+@media (max-width: 720px) {
+    .workspace {
+        --writing-sidebar-width: 0px;
+    }
+
+    .workspace-content {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-areas: "tools" "editor";
     }
 }

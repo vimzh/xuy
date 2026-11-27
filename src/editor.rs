@@ -64,6 +64,8 @@ pub(crate) fn Editor(
     on_save: EventHandler<()>,
     cursor: CursorOptions,
     summary: Memo<NoteSummary>,
+    notices: Element,
+    writing_sidebar_open: bool,
 ) -> Element {
     let tracker = use_signal(|| None::<document::Eval>);
     let mut feedback = use_signal(|| None::<&'static str>);
@@ -83,7 +85,8 @@ pub(crate) fn Editor(
     });
     rsx! {
         document::Stylesheet { href: asset!("/assets/writing-sidebar.css") }
-        div { class: "note-writing",
+        div { class: "workspace-writing",
+            {notices}
             section {
                 class: "note-editor",
                 aria_label: "Markdown editor",
@@ -118,35 +121,36 @@ pub(crate) fn Editor(
                     }
                 }
             }
-            WritingSidebar {
-                summary, preview: mode == ViewMode::Preview, busy: busy || applying_highlight(), feedback,
-                on_jump: move |(index, offset)| {
-                    if *view_mode.peek() == ViewMode::Preview {
-                        document::eval(&format!("
-                            const heading = document.querySelector('.markdown-preview')
-                                ?.querySelectorAll('h1,h2,h3,h4,h5,h6')[{index}];
-                            if (heading) {{
-                                heading.tabIndex = -1;
-                                heading.focus({{preventScroll: true}});
-                                heading.scrollIntoView({{block: 'start'}});
-                            }}
-                        "));
-                    } else if let Some(tracker) = *tracker.peek() {
-                        let _ = tracker.send(offset);
-                    }
-                },
-                on_highlight: move |color| {
-                    if *applying_highlight.peek() {
-                        return;
-                    }
-                    applying_highlight.set(true);
-                    let desktop = desktop.clone();
-                    spawn(async move {
-                        feedback.set(apply_highlight(color, &desktop).await.err());
-                        applying_highlight.set(false);
-                    });
-                },
-            }
+        }
+        WritingSidebar {
+            open: writing_sidebar_open,
+            summary, preview: mode == ViewMode::Preview, busy: busy || applying_highlight(), feedback,
+            on_jump: move |(index, offset)| {
+                if *view_mode.peek() == ViewMode::Preview {
+                    document::eval(&format!("
+                        const heading = document.querySelector('.markdown-preview')
+                            ?.querySelectorAll('h1,h2,h3,h4,h5,h6')[{index}];
+                        if (heading) {{
+                            heading.tabIndex = -1;
+                            heading.focus({{preventScroll: true}});
+                            heading.scrollIntoView({{block: 'start'}});
+                        }}
+                    "));
+                } else if let Some(tracker) = *tracker.peek() {
+                    let _ = tracker.send(offset);
+                }
+            },
+            on_highlight: move |color| {
+                if *applying_highlight.peek() {
+                    return;
+                }
+                applying_highlight.set(true);
+                let desktop = desktop.clone();
+                spawn(async move {
+                    feedback.set(apply_highlight(color, &desktop).await.err());
+                    applying_highlight.set(false);
+                });
+            },
         }
     }
 }

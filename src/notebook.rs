@@ -12,6 +12,17 @@ pub(crate) struct Entry {
     pub(crate) is_dir: bool,
 }
 
+impl Entry {
+    pub(crate) fn name(&self) -> &OsStr {
+        if self.is_dir {
+            self.path.file_name()
+        } else {
+            self.path.file_stem()
+        }
+        .unwrap_or(self.path.as_os_str())
+    }
+}
+
 pub(crate) fn open_root(path: &Path) -> io::Result<(PathBuf, Vec<Entry>)> {
     let root = fs::canonicalize(path).map_err(|err| at(err, "Open folder", path))?;
     let entries = list(&root, &root)?;
@@ -39,8 +50,12 @@ pub(crate) fn list(root: &Path, folder: &Path) -> io::Result<Vec<Entry>> {
             });
         }
     }
-    entries.sort_unstable_by(|left, right| {
-        (!left.is_dir, &left.path).cmp(&(!right.is_dir, &right.path))
+    entries.sort_by_cached_key(|entry| {
+        (
+            !entry.is_dir,
+            entry.name().to_string_lossy().to_lowercase(),
+            entry.path.clone(),
+        )
     });
     Ok(entries)
 }
@@ -242,15 +257,17 @@ mod tests {
     #[test]
     fn lists_one_level_with_folders_first() -> io::Result<()> {
         let temp = tempfile::tempdir()?;
-        fs::create_dir(temp.path().join("projects"))?;
+        fs::create_dir(temp.path().join("Projects"))?;
         fs::create_dir(temp.path().join("archive"))?;
         fs::create_dir(temp.path().join(".hidden"))?;
         for name in [
             "z.md",
+            "B.MarkDown",
+            "a-long.md",
             "a.MarkDown",
             ".hidden.md",
             "skip.txt",
-            "projects/inside.MD",
+            "Projects/inside.MD",
         ] {
             fs::write(temp.path().join(name), "")?;
         }
@@ -265,16 +282,18 @@ mod tests {
             names,
             [
                 ("archive", true),
-                ("projects", true),
+                ("Projects", true),
                 ("a.MarkDown", false),
+                ("a-long.md", false),
+                ("B.MarkDown", false),
                 ("z.md", false)
             ]
             .map(|(name, is_dir)| (OsStr::new(name), is_dir))
         );
         assert_eq!(
-            list(&root, &root.join("projects"))?,
+            list(&root, &root.join("Projects"))?,
             [Entry {
-                path: root.join("projects/inside.MD"),
+                path: root.join("Projects/inside.MD"),
                 is_dir: false
             }]
         );

@@ -8,7 +8,7 @@ Click **notebooks** on Home, press `⌘P`, or choose **Notebook > Notebooks** to
 
 When you switch notebooks with unsaved edits, **Keep editing** keeps your draft open. **Discard changes** switches to the other notebook.
 
-Click a subfolder to browse it. The current folder appears in the title bar next to the back and forward arrows. Use the up arrow beside the folder name to return to its parent. The sidebar lists folders first and shows the most recently modified notes first. Click a note to open its Markdown source.
+Click a subfolder to browse it. The current folder appears in the title bar next to the back and forward arrows. Use the up arrow beside the folder name to return to its parent. The sidebar lists folders first and notes second, with each group sorted alphabetically by name. Click a note to open its Markdown source.
 
 When you reopen xuy, it returns to the last notebook, sidebar folder, and active page. The page opens in edit mode. Choose **Notebook > Home** before quitting to start at Home next time.
 
@@ -16,7 +16,7 @@ Press `⌘K` to open the command bar from Home or while writing. Type to filter 
 
 Search for a setting such as **Writing Font**, **Line Spacing**, **Code Block Theme**, or **Cursor Shape** to change it directly. The current choices have checkmarks. With a page open, use **Show Preview**, **Edit Source**, or **Open Side by Side**. **Save Page** appears when the page has unsaved edits, and **Previous Page** and **Next Page** appear when there is page history in that direction.
 
-Drag the divider between the sidebar and editor to change the sidebar width. With the divider focused, use the left and right arrow keys to resize it, or use `Home` and `End` for its width limits. In a narrow window, the file list moves above the editor. Use the sidebar button in the title bar to give the editor the full width.
+Drag the divider between the left sidebar and editor to change the sidebar width. With the divider focused, use the left and right arrow keys to resize it, or use `Home` and `End` for its width limits. In a narrow window, the file list moves above the editor. Use the sidebar buttons on either end of the title bar to show or hide each sidebar.
 
 ## Create, edit, and save a note
 
@@ -56,7 +56,7 @@ You can also change **Writing width** in Settings. Settings and the toolbar shar
 
 ## Use the outline and highlights
 
-The **Outline** in the right sidebar lists the active note’s headings and subheadings. Indents and guide lines show the hierarchy. Select a heading to jump to it in Edit or Preview.
+The **Outline** in the right sidebar lists the active note’s headings and subheadings. Indents and guide lines show the hierarchy. Select a heading to jump to it in Edit or Preview. In a narrow window, **Outline** and **Highlights** move above the editor.
 
 In Edit, choose **Highlights**, select regular Markdown text, and pick **Yellow**, **Mint**, **Sky**, **Rose**, or **Lavender**. To recolor a highlight or clear it, select it or place the cursor inside it, then choose another color or **Clear highlight**. The colors adapt to Light and Dark. Highlights are saved in the Markdown file. Edit shows the inline markup and Preview shows the colored text.
 
