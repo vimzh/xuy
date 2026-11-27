@@ -116,3 +116,38 @@ h2 {
     font-size: 13px;
     font-weight: 500;
 }
+
+.app-dialog {
+    box-sizing: border-box;
+    max-height: calc(100% - 24px);
+    padding: 20px;
+    border: 1px solid var(--control-border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--ink);
+    text-align: left;
+}
+
+.app-dialog::backdrop {
+    background: rgb(0 0 0 / 14%);
+}
+
+.app-dialog form {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 16px;
+}
+
+.app-dialog button {
+    display: block;
+    min-height: 28px;
+    padding: 4px 10px;
+    border: 1px solid var(--control-border);
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.app-dialog button:focus-visible {
+    outline: 1px solid var(--focus);
+    outline-offset: 2px;
+}

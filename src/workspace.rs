@@ -91,19 +91,27 @@ impl OpenNotebook {
             (!warnings.is_empty()).then(|| warnings.join(" ")),
         ))
     }
+    pub(crate) fn root(&self) -> &Path {
+        &self.root
+    }
 }
 
-pub(crate) async fn pick_notebook(start_new: bool) -> io::Result<Option<OpenNotebook>> {
-    let Some(folder) = AsyncFileDialog::new()
-        .set_title("Open Markdown folder")
+pub(crate) async fn pick_notebook(
+    title: &str,
+    start_new: bool,
+    can_create: bool,
+) -> io::Result<Option<OpenNotebook>> {
+    match AsyncFileDialog::new()
+        .set_title(title)
+        .set_can_create_directories(can_create)
         .pick_folder()
         .await
-    else {
-        return Ok(None);
-    };
-    OpenNotebook::open(folder.path().to_owned(), start_new)
-        .await
-        .map(Some)
+    {
+        Some(folder) => OpenNotebook::open(folder.path().to_owned(), start_new)
+            .await
+            .map(Some),
+        None => Ok(None),
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -117,7 +125,12 @@ pub(crate) fn Workspace(
     opened: OpenNotebook,
     page_width: Signal<PageWidth>,
     zoom: f64,
+    mut busy: Signal<bool>,
     mut error: Signal<Option<String>>,
+    mut pending: Signal<Option<OpenNotebook>>,
+    mut palette_command: Signal<Option<&'static str>>,
+    modal_open: Memo<bool>,
+    on_switch: EventHandler<OpenNotebook>,
     on_home: EventHandler<()>,
 ) -> Element {
     let root = use_signal(|| opened.root);
@@ -141,7 +154,6 @@ pub(crate) fn Workspace(
     });
     let mut naming = use_signal(|| opened.start_new.then_some(NewEntry::Note));
     let mut name = use_signal(String::new);
-    let mut busy = use_signal(|| false);
     let confirmation = use_signal(|| None::<oneshot::Sender<bool>>);
     let dirty = use_memo(move || *draft.read() != *saved.read());
     // Keep unavailable paths until the user opens a new location.
@@ -240,7 +252,7 @@ pub(crate) fn Workspace(
         event.prevent_default();
         async move {
             let Some(kind) = *naming.peek() else { return };
-            if *busy.peek() {
+            if *busy.peek() || *modal_open.peek() {
                 return;
             }
             busy.set(true);
@@ -289,6 +301,8 @@ pub(crate) fn Workspace(
     let save = move |expected_edit: Option<Instant>| async move {
         let edited = *last_edit.peek();
         if *busy.peek()
+            || *modal_open.peek()
+            || pending.peek().is_some()
             || *draft.peek() == *saved.peek()
             || expected_edit.is_some_and(|expected| {
                 edited != Some(expected) || *failed_edit.peek() == Some(expected)
@@ -327,7 +341,12 @@ pub(crate) fn Workspace(
     };
     use_resource(move || async move {
         let Some(edited) = last_edit() else { return };
-        if busy() || !dirty() || failed_edit() == Some(edited) {
+        if busy()
+            || !dirty()
+            || failed_edit() == Some(edited)
+            || modal_open()
+            || pending.read().is_some()
+        {
             return;
         }
         sleep_until(edited + Duration::from_secs(1)).await;
@@ -335,17 +354,27 @@ pub(crate) fn Workspace(
         spawn(save(Some(edited)));
     });
 
-    let go_home = move || async move {
+    let leave = move || async move {
         if *busy.peek() {
-            return;
+            return false;
         }
         busy.set(true);
         let confirmed = allow_leave(draft, saved, confirmation).await;
         busy.set(false);
-        if confirmed {
-            on_home.call(());
-        }
+        confirmed
     };
+    use_effect(move || {
+        if pending.read().is_some() {
+            spawn(async move {
+                let next = pending.write().take();
+                if let Some(next) = next
+                    && leave().await
+                {
+                    on_switch.call(next);
+                }
+            });
+        }
+    });
     let mut toggle_preview = move |_| {
         if !*busy.peek() && selected.peek().is_some() {
             let next = !*preview.peek();
@@ -362,11 +391,16 @@ pub(crate) fn Workspace(
             naming.set(Some(kind));
         }
     };
-    use_muda_event_handler(move |event| match event.id().0.as_str() {
+    let mut run_command = move |id: &str| match id {
+        _ if *modal_open.peek() || pending.peek().is_some() => {}
         notebook_menu::NEW_NOTE => begin(NewEntry::Note),
         notebook_menu::NEW_FOLDER => begin(NewEntry::Folder),
         notebook_menu::HOME => {
-            spawn(go_home());
+            spawn(async move {
+                if leave().await {
+                    on_home.call(());
+                }
+            });
         }
         notebook_menu::TOGGLE_SIDEBAR => toggle_sidebar(()),
         notebook_menu::TOGGLE_PREVIEW => toggle_preview(()),
@@ -374,6 +408,13 @@ pub(crate) fn Workspace(
             spawn(save(None));
         }
         _ => {}
+    };
+    use_muda_event_handler(move |event| run_command(event.id().0.as_str()));
+    use_effect(move || {
+        if let Some(id) = palette_command() {
+            palette_command.set(None);
+            run_command(id);
+        }
     });
     use_effect(move || {
         notebook_menu::update(true, selected.read().is_some(), preview(), dirty(), busy())
@@ -468,7 +509,7 @@ pub(crate) fn Workspace(
                     }
                     if let Some(path) = selected() {
                         Editor { key: "{path:?}",
-                            draft, dirty, preview, chrome_hidden, busy: busy() && !saving(),
+                            draft, dirty, preview, chrome_hidden, busy: (busy() && !saving()) || modal_open(),
                             on_edit: move |text| {
                                 draft.set(text);
                                 last_edit.set(Some(Instant::now()));

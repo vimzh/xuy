@@ -6,12 +6,16 @@ use dioxus::desktop::muda::accelerator::{Accelerator, Code, Modifiers};
 use dioxus::desktop::muda::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 
 pub(crate) const HOME: &str = "xuy-home";
+pub(crate) const COMMAND_BAR: &str = "xuy-command-bar";
 pub(crate) const TOGGLE_SIDEBAR: &str = "xuy-toggle-sidebar";
 pub(crate) const TOGGLE_PREVIEW: &str = "xuy-toggle-preview";
 pub(crate) const SAVE: &str = "xuy-save";
 
 pub(crate) const NEW_NOTE: &str = "xuy-new-note";
 pub(crate) const NEW_FOLDER: &str = "xuy-new-folder";
+pub(crate) const NEW_NOTEBOOK: &str = "xuy-new-notebook";
+pub(crate) const OPEN_FOLDER: &str = "xuy-open-folder";
+pub(crate) const NOTEBOOKS: &str = "xuy-notebooks";
 
 #[cfg(target_os = "macos")]
 pub(crate) fn show_sidebar(window: &dioxus::desktop::tao::window::Window) {
@@ -27,7 +31,6 @@ pub(crate) fn show_sidebar(window: &dioxus::desktop::tao::window::Window) {
 }
 
 struct Commands {
-    notebook: Submenu,
     new_note: MenuItem,
     new_folder: MenuItem,
     home: MenuItem,
@@ -45,6 +48,12 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
         "xuy",
         true,
         &[
+            &MenuItem::with_id(
+                COMMAND_BAR,
+                "Command Bar…",
+                true,
+                Some(Accelerator::new(Some(Modifiers::SUPER), Code::KeyK)),
+            ),
             &crate::theme::menu(appearance),
             &PredefinedMenuItem::fullscreen(None),
             &PredefinedMenuItem::separator(),
@@ -75,21 +84,6 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
     )
     .expect("build editing menu");
 
-    let new_note = MenuItem::with_id(
-        NEW_NOTE,
-        "New Note…",
-        false,
-        Some(Accelerator::new(Some(Modifiers::SUPER), Code::KeyN)),
-    );
-    let new_folder = MenuItem::with_id(
-        NEW_FOLDER,
-        "New Folder…",
-        false,
-        Some(Accelerator::new(
-            Some(Modifiers::SUPER | Modifiers::SHIFT),
-            Code::KeyN,
-        )),
-    );
     let home = MenuItem::with_id(HOME, "Home", false, None);
     let toggle_sidebar = MenuItem::with_id(
         TOGGLE_SIDEBAR,
@@ -98,13 +92,48 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
         Some(Accelerator::new(Some(Modifiers::SUPER), Code::KeyB)),
     );
     let toggle_preview = MenuItem::with_id(TOGGLE_PREVIEW, "Edit Source", false, None);
-    let save = MenuItem::with_id(SAVE, "Save", false, None);
+    let command = |id, text, enabled, modifiers, key| {
+        MenuItem::with_id(
+            id,
+            text,
+            enabled,
+            Some(Accelerator::new(Some(modifiers), key)),
+        )
+    };
+    let new_note = command(NEW_NOTE, "New Note…", true, Modifiers::SUPER, Code::KeyN);
+    let new_folder = command(
+        NEW_FOLDER,
+        "New Folder…",
+        false,
+        Modifiers::SUPER | Modifiers::SHIFT,
+        Code::KeyN,
+    );
+    let new_notebook = command(
+        NEW_NOTEBOOK,
+        "New Notebook…",
+        true,
+        Modifiers::SUPER | Modifiers::ALT,
+        Code::KeyN,
+    );
+    let open_folder = command(
+        OPEN_FOLDER,
+        "Open Folder…",
+        true,
+        Modifiers::SUPER,
+        Code::KeyO,
+    );
+    let notebooks = command(NOTEBOOKS, "Notebooks…", true, Modifiers::SUPER, Code::KeyP);
+    let save = command(SAVE, "Save", false, Modifiers::SUPER, Code::KeyS);
     let notebook = Submenu::with_items(
         "Notebook",
-        false,
+        true,
         &[
             &new_note,
             &new_folder,
+            &new_notebook,
+            &open_folder,
+            &notebooks,
+            &PredefinedMenuItem::separator(),
             &home,
             &toggle_sidebar,
             &toggle_preview,
@@ -139,7 +168,6 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
     }
 
     COMMANDS.set(Some(Commands {
-        notebook,
         new_note,
         new_folder,
         home,
@@ -153,8 +181,7 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
 pub(crate) fn update(open: bool, has_note: bool, preview: bool, dirty: bool, busy: bool) {
     COMMANDS.with_borrow(|commands| {
         if let Some(commands) = commands {
-            commands.notebook.set_enabled(open);
-            commands.new_note.set_enabled(open && !busy);
+            commands.new_note.set_enabled(!busy);
             commands.new_folder.set_enabled(open && !busy);
             commands.home.set_enabled(open && !busy);
             commands.toggle_sidebar.set_enabled(open);

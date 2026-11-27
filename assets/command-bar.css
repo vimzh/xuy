@@ -1,0 +1,142 @@
+#command-bar {
+    position: fixed;
+    z-index: 51;
+    inset: 0;
+    box-sizing: border-box;
+    width: min(28rem, calc(100% - 32px));
+    height: max-content;
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 5px;
+    border: 1px solid var(--control-border);
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--ink);
+    font: 13px/1.4 "iA Writer Mono", Menlo, monospace;
+    text-align: left;
+}
+
+#command-bar[open] {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#command-scrim {
+    position: fixed;
+    z-index: 50;
+    inset: 0;
+    background: rgb(0 0 0 / 16%);
+}
+
+.command-search,
+#command-options button {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding-inline: 10px;
+}
+
+.command-search {
+    min-height: 38px;
+    margin-bottom: 3px;
+}
+
+#command-bar img {
+    filter: var(--icon-filter);
+}
+
+.command-search input {
+    min-width: 0;
+    padding: 5px 0;
+    border: 0;
+    border-radius: 2px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+}
+
+.command-search input::placeholder {
+    color: var(--muted);
+    opacity: 1;
+}
+
+.command-search input:focus {
+    outline: none;
+}
+
+.command-search:focus-within {
+    background: var(--inset);
+    border-radius: 5px;
+}
+
+.command-search button {
+    display: grid;
+    grid-template-columns: 1fr;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.command-search button:hover {
+    background: var(--hover);
+}
+
+.command-search button:focus-visible {
+    outline: 1px solid var(--focus);
+    outline-offset: 1px;
+}
+
+#command-options {
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+}
+
+#command-options button {
+    width: 100%;
+    min-height: 34px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#command-options button:hover {
+    background: var(--hover);
+}
+
+#command-options button[data-selected="true"] {
+    background: var(--selected);
+}
+
+#command-options button:focus-visible {
+    outline: 1px solid var(--focus);
+    outline-offset: -1px;
+}
+
+#command-options kbd {
+    min-height: 0;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.command-empty {
+    margin: 7px 10px 10px;
+    color: var(--muted);
+}
+
+.command-announcement {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    overflow: hidden;
+    white-space: nowrap;
+}

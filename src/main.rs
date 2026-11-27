@@ -1,9 +1,12 @@
 mod chrome;
+mod command_bar;
 mod dropdown;
 mod editor;
+mod modal;
 mod note_history;
 mod notebook;
 mod notebook_menu;
+mod notebook_picker;
 mod page_width;
 mod theme;
 mod workspace;
@@ -11,8 +14,17 @@ mod workspace_session;
 mod workspace_sidebar;
 mod zoom;
 
-use dioxus::desktop::{Config, WindowBuilder};
+use dioxus::desktop::{Config, WindowBuilder, use_muda_event_handler};
 use dioxus::prelude::*;
+use std::path::PathBuf;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ChooseFolder {
+    Open,
+    NewNote,
+    NewNotebook,
+    AddNotebook,
+}
 
 fn main() {
     let appearance = theme::Appearance::load();
@@ -35,7 +47,13 @@ fn App() -> Element {
     let zoom = zoom::use_zoom_shortcuts();
     let scale = f64::from(zoom()) / 100.0;
     let mut opened = use_signal(|| None::<workspace::OpenNotebook>);
+    let mut pending = use_signal(|| None::<workspace::OpenNotebook>);
+    let mut palette_command = use_signal(|| None::<&'static str>);
+    let mut command_open = use_signal(|| false);
+    let busy = use_signal(|| false);
     let page_width = use_signal(page_width::PageWidth::default);
+    let mut picker_open = use_signal(|| false);
+    let saved = use_signal(notebook_picker::load);
     let mut opening = use_signal(|| true);
     let mut error = use_signal(|| None::<String>);
     use_future(move || async move {
@@ -58,32 +76,130 @@ fn App() -> Element {
     });
     let icons = asset!("/assets/hugeicons", AssetOptions::folder());
     let mono = asset!("/assets/ia-writer-mono", AssetOptions::folder());
+    let modal_open = use_memo(move || picker_open() || opening() || command_open());
+    let commands_blocked =
+        move || *picker_open.peek() || *opening.peek() || pending.peek().is_some() || *busy.peek();
+    let mut activate = move |notebook: workspace::OpenNotebook| {
+        let same_folder = opened
+            .peek()
+            .as_ref()
+            .map(|current| current.root() == notebook.root());
+        match same_folder {
+            Some(false) => pending.set(Some(notebook)),
+            Some(true) => {}
+            None => opened.set(Some(notebook)),
+        }
+    };
+    let choose = move |action| async move {
+        let add = action == ChooseFolder::AddNotebook;
+        if *busy.peek() || pending.peek().is_some() || *opening.peek() || *picker_open.peek() != add
+        {
+            return;
+        }
+        let (title, start_new, can_create) = match action {
+            ChooseFolder::Open => ("Open Markdown folder", false, true),
+            ChooseFolder::NewNote => ("Choose a folder for the note", true, true),
+            ChooseFolder::NewNotebook => ("Choose or create a notebook folder", false, true),
+            ChooseFolder::AddNotebook => ("Choose an existing notebook folder", false, false),
+        };
+        opening.set(true);
+        error.set(None);
+        match workspace::pick_notebook(title, start_new, can_create).await {
+            Ok(Some(notebook)) => {
+                if matches!(
+                    action,
+                    ChooseFolder::NewNotebook | ChooseFolder::AddNotebook
+                ) && let Err(failure) = notebook_picker::register(saved, notebook.root())
+                {
+                    error.set(Some(failure.to_string()));
+                } else if !add {
+                    activate(notebook);
+                }
+            }
+            Ok(None) => {}
+            Err(failure) => error.set(Some(failure.to_string())),
+        }
+        opening.set(false);
+    };
+    let open_saved = move |path: PathBuf| async move {
+        if *opening.peek() || *busy.peek() || pending.peek().is_some() || !*picker_open.peek() {
+            return;
+        }
+        opening.set(true);
+        error.set(None);
+        match workspace::OpenNotebook::open(path.clone(), false).await {
+            Ok(notebook) if notebook.root() == path => {
+                document::eval("document.getElementById('notebook-picker').close();");
+                activate(notebook);
+            }
+            Ok(_) => error.set(Some(format!("{} now points to a different folder. Add the folder again to save its current location.", path.display()))),
+            Err(failure) => error.set(Some(failure.to_string())),
+        }
+        opening.set(false);
+    };
+    let mut run_app_command = move |id: &str| match id {
+        notebook_menu::NOTEBOOKS => {
+            error.set(None);
+            picker_open.set(true);
+        }
+        notebook_menu::NEW_NOTE if opened.peek().is_none() => {
+            spawn(choose(ChooseFolder::NewNote));
+        }
+        notebook_menu::NEW_NOTEBOOK => {
+            spawn(choose(ChooseFolder::NewNotebook));
+        }
+        notebook_menu::OPEN_FOLDER => {
+            spawn(choose(ChooseFolder::Open));
+        }
+        _ => {}
+    };
+    use_muda_event_handler(move |event| {
+        let id = event.id().0.as_str();
+        if id == notebook_menu::COMMAND_BAR && *command_open.peek() {
+            command_bar::close();
+        } else if !commands_blocked() && !*command_open.peek() {
+            if id == notebook_menu::COMMAND_BAR {
+                command_open.set(true);
+            } else {
+                run_app_command(id);
+            }
+        }
+    });
+    let palette_closed = move |choice| {
+        command_open.set(false);
+        if let Some(id) = choice
+            && !commands_blocked()
+        {
+            let in_notebook = opened.peek().is_some();
+            match id {
+                notebook_menu::NEW_NOTE
+                | notebook_menu::NEW_FOLDER
+                | notebook_menu::HOME
+                | notebook_menu::TOGGLE_SIDEBAR
+                    if in_notebook =>
+                {
+                    palette_command.set(Some(id))
+                }
+                _ => run_app_command(id),
+            }
+        }
+    };
     let actions = [
         ("new", "N", "add-01"),
         ("open", "O", "folder-open"),
         ("settings", ",", "settings-01"),
         ("docs", "D", "book-open-01"),
     ];
-    let choose = move |start_new: bool| async move {
-        if *opening.peek() {
-            return;
-        }
-        opening.set(true);
-        error.set(None);
-        match workspace::pick_notebook(start_new).await {
-            Ok(Some(notebook)) => opened.set(Some(notebook)),
-            Ok(None) => {}
-            Err(failure) => error.set(Some(failure.to_string())),
-        }
-        opening.set(false);
-    };
 
     rsx! {
         document::Stylesheet { href: asset!("/assets/app.css") }
         document::Stylesheet { href: "{mono}/fonts.css" }
-        if let Some(notebook) = opened() {
+        if let Some((key, notebook)) = opened().map(|notebook| (format!("{:?}", notebook.root()), notebook)) {
             workspace::Workspace {
-                opened: notebook, page_width, zoom: scale, error,
+                key: "{key}",
+                opened: notebook, page_width, zoom: scale,
+                busy, pending, error, modal_open, palette_command,
+                on_switch: move |notebook| opened.set(Some(notebook)),
                 on_home: move |_| {
                     workspace_session::clear();
                     error.set(None);
@@ -101,7 +217,7 @@ fn App() -> Element {
                     for (label, shortcut, icon) in actions {
                         button { key: "{label}",
                             disabled: opening() || !matches!(label, "new" | "open"),
-                            onclick: move |_| async move { choose(label == "new").await },
+                            onclick: move |_| async move { choose(if label == "new" { ChooseFolder::NewNote } else { ChooseFolder::Open }).await },
                             img { src: "{icons}/{icon}.svg", alt: "", width: "16", height: "16" }
                             span { "{label}" }
                             kbd { aria_hidden: true,
@@ -117,6 +233,22 @@ fn App() -> Element {
                 section { aria_labelledby: "recent-heading",
                     h2 { id: "recent-heading", "Recently Opened" }
                 }
+            }
+        }
+        if command_open() {
+            command_bar::CommandBar {
+                commands: command_bar::notebook_commands(opened.read().is_some()),
+                on_close: palette_closed,
+            }
+        }
+        if picker_open() {
+            notebook_picker::NotebookPicker {
+                saved, busy: opening(), error: error(), on_open: open_saved,
+                on_add: move |_| choose(ChooseFolder::AddNotebook),
+                on_close: move |_| {
+                    picker_open.set(false);
+                    error.set(None);
+                },
             }
         }
     }
