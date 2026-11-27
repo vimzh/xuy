@@ -69,6 +69,7 @@
     min-width: 0;
     padding: clamp(18px, 3vw, 32px) clamp(20px, 5vw, 56px);
     overflow: auto;
+    background: #f5f3f0;
 }
 
 .workspace-content > * {
