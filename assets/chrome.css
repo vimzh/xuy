@@ -15,6 +15,24 @@
     inset: 0;
 }
 
+.chrome-reveal {
+    background: var(--paper);
+}
+
+.chrome-reveal::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: var(--sidebar-track);
+    background: var(--sidebar-surface);
+    pointer-events: none;
+}
+
+.workspace:not([data-sidebar-resizing]) .chrome-reveal::before {
+    transition: width var(--sidebar-motion);
+}
+
 .chrome-strip {
     display: grid;
     grid-template: minmax(0, 1fr) / minmax(0, 1fr);
@@ -88,10 +106,6 @@
     pointer-events: none;
 }
 
-.chrome-reveal ~ .chrome-filename {
-    inset-inline: 12px;
-}
-
 .chrome-filename-text {
     position: relative;
     min-width: 0;
@@ -161,6 +175,10 @@
 @media (max-width: 520px) {
     .notebook-chrome {
         --chrome-left-inset: 76px;
+    }
+
+    .workspace[data-sidebar-open="true"] .chrome-reveal::before {
+        width: 100%;
     }
 
     .chrome-sidebar-rule {

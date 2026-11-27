@@ -125,9 +125,9 @@ pub(crate) fn NotebookChrome(
                             }
                         }
                     }
-                }
-                div { class: "chrome-filename",
-                    span { class: "chrome-filename-text", "data-dirty": dirty, "{filename}" }
+                    div { class: "chrome-filename",
+                        span { class: "chrome-filename-text", "data-dirty": dirty, "{filename}" }
+                    }
                 }
             }
         }
