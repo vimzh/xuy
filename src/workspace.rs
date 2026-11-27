@@ -200,7 +200,7 @@ pub(crate) fn Workspace(
         match result {
             Ok(text) => {
                 saved.set(text);
-                // Refresh the saved note's date and excerpt.
+                // Refresh the saved note's modification time in the sidebar.
                 drop(entries.write());
             }
             Err(failure) => error.set(Some(failure.to_string())),

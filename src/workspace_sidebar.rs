@@ -10,9 +10,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use dioxus::prelude::*;
 use time::{Date, OffsetDateTime, UtcOffset};
 
-use crate::notebook::{self, Entry, NoteDetails};
+use crate::notebook::{self, Entry};
 
-type FolderDetails = HashMap<PathBuf, io::Result<(NoteDetails, Option<OffsetDateTime>)>>;
+type FolderDetails = HashMap<PathBuf, io::Result<(SystemTime, Option<OffsetDateTime>)>>;
 
 #[component]
 pub(crate) fn WorkspaceSidebar(
@@ -47,10 +47,8 @@ pub(crate) fn WorkspaceSidebar(
                     // Stop between files if a new folder replaces this resource.
                     .take_while(|_| active_worker.strong_count() != 0)
                     .map(|entry| {
-                        let details = notebook::note_details(&root, &entry.path).map(|note| {
-                            let modified = local_timestamp(note.modified);
-                            (note, modified)
-                        });
+                        let details = notebook::note_modified(&root, &entry.path)
+                            .map(|modified| (modified, local_timestamp(modified)));
                         (entry.path, details)
                     })
                     .collect::<FolderDetails>()
@@ -96,12 +94,14 @@ pub(crate) fn WorkspaceSidebar(
                         rsx! {
                             li { key: "{entry.path:?}",
                                 button {
-                                    class: if entry.is_dir { "sidebar-entry sidebar-folder" } else { "sidebar-entry" },
+                                    class: "sidebar-entry",
                                     r#type: "button",
                                     disabled: busy,
                                     aria_current: active.then_some("true"),
                                     title: "{name}",
                                     onclick: { let entry = entry.clone(); move |_| on_browse.call(entry.clone()) },
+                                    img { class: "sidebar-entry-icon", src: icon, alt: "" }
+                                    span { class: "sidebar-entry-name", "{name}" }
                                     if let Some(note) = note {
                                         if let Some(modified) = note.as_ref().ok().and_then(|(_, modified)| *modified) {
                                             {
@@ -121,16 +121,6 @@ pub(crate) fn WorkspaceSidebar(
                                             span { class: "sidebar-date", title: "Modification time unavailable", "—" }
                                         }
                                     }
-                                    img { class: "sidebar-entry-icon", src: icon, alt: "" }
-                                    span { class: "sidebar-entry-name", "{name}" }
-                                    if let Some(note) = note {
-                                        match note.as_ref().and_then(|(note, _)| {
-                                            note.preview.as_deref()
-                                        }) {
-                                            Ok(preview) => rsx! { span { class: "sidebar-excerpt", "{preview}" } },
-                                            Err(error) => rsx! { span { class: "sidebar-excerpt", title: "{error}", "Preview unavailable" } },
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -147,7 +137,7 @@ fn sort_by_date(entries: &mut [&Entry], details: &FolderDetails) {
         let modified = details
             .get(&entry.path)
             .and_then(|result| result.as_ref().ok())
-            .map(|(note, _)| note.modified);
+            .map(|(modified, _)| *modified);
         (!entry.is_dir, Reverse(modified))
     });
 }
@@ -206,13 +196,7 @@ mod tests {
             .map(|(entry, seconds)| {
                 (
                     entry.path.clone(),
-                    Ok((
-                        NoteDetails {
-                            modified: UNIX_EPOCH + Duration::from_secs(seconds),
-                            preview: Ok(String::new()),
-                        },
-                        None,
-                    )),
+                    Ok((UNIX_EPOCH + Duration::from_secs(seconds), None)),
                 )
             })
             .collect();

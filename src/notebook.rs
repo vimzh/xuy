@@ -2,21 +2,14 @@
 
 use std::ffi::OsStr;
 use std::fs;
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
 use std::time::SystemTime;
-
-use pulldown_cmark::{Event, Parser, TagEnd};
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Entry {
     pub(crate) path: PathBuf,
     pub(crate) is_dir: bool,
-}
-
-pub(crate) struct NoteDetails {
-    pub(crate) modified: SystemTime,
-    pub(crate) preview: io::Result<String>,
 }
 
 pub(crate) fn open_root(path: &Path) -> io::Result<(PathBuf, Vec<Entry>)> {
@@ -85,55 +78,11 @@ pub(crate) fn read(root: &Path, path: &Path) -> io::Result<String> {
     fs::read_to_string(path).map_err(|err| at(err, "Read note", path))
 }
 
-pub(crate) fn note_details(root: &Path, path: &Path) -> io::Result<NoteDetails> {
+pub(crate) fn note_modified(root: &Path, path: &Path) -> io::Result<SystemTime> {
     let (_, metadata) = check_note(root, path)?;
-    let modified = metadata
+    metadata
         .modified()
-        .map_err(|err| at(err, "Read modified date of", path))?;
-    let preview = read_preview(path).map_err(|err| at(err, "Read preview of", path));
-    Ok(NoteDetails { modified, preview })
-}
-
-fn read_preview(path: &Path) -> io::Result<String> {
-    const PREVIEW_BYTES: usize = 4096;
-    let mut bytes = Vec::new();
-    fs::File::open(path)?
-        .take((PREVIEW_BYTES + 1) as u64)
-        .read_to_end(&mut bytes)?;
-    let truncated = bytes.len() > PREVIEW_BYTES;
-    bytes.truncate(PREVIEW_BYTES);
-    let source = str::from_utf8(&bytes)
-        .or_else(|error| {
-            if truncated && error.error_len().is_none() {
-                str::from_utf8(&bytes[..error.valid_up_to()])
-            } else {
-                Err(error)
-            }
-        })
-        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
-
-    let mut preview = String::new();
-    for event in Parser::new(source) {
-        match event {
-            Event::Text(text) | Event::Code(text) => preview.push_str(&text),
-            Event::HardBreak
-            | Event::SoftBreak
-            | Event::Rule
-            | Event::End(
-                TagEnd::Paragraph | TagEnd::Heading(_) | TagEnd::Item | TagEnd::CodeBlock,
-            ) => {
-                preview.push(' ');
-            }
-            _ => {}
-        }
-    }
-    Ok(preview
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .chars()
-        .take(160)
-        .collect())
+        .map_err(|err| at(err, "Read modified date of", path))
 }
 
 pub(crate) fn save(root: &Path, path: &Path, original: &str, text: &str) -> io::Result<()> {
@@ -234,26 +183,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn reads_short_plain_text_previews() -> io::Result<()> {
+    fn reads_modification_time_even_for_invalid_markdown_contents() -> io::Result<()> {
         let temp = tempfile::tempdir()?;
         let (root, _) = open_root(temp.path())?;
         let note = root.join("note.md");
-        fs::write(
-            &note,
-            "# Heading\n\n**Some** [text](https://example.com)\nwith `code`.",
-        )?;
-        assert_eq!(
-            note_details(&root, &note)?.preview?,
-            "Heading Some text with code."
-        );
-
-        fs::write(&note, format!("{}é", "a".repeat(4095)))?;
-        assert_eq!(note_details(&root, &note)?.preview?, "a".repeat(160));
-
         fs::write(&note, b"invalid \xFF")?;
         assert_eq!(
-            note_details(&root, &note)?.preview.unwrap_err().kind(),
-            io::ErrorKind::InvalidData
+            note_modified(&root, &note)?,
+            fs::metadata(&note)?.modified()?
         );
         Ok(())
     }
@@ -386,7 +323,7 @@ mod tests {
         assert!(create(&root, &folder_link, "other").is_err());
         assert!(read(&root, &note_link).is_err());
         assert!(read(&root, &folder_link.join("original.md")).is_err());
-        assert!(note_details(&root, &note_link).is_err());
+        assert!(note_modified(&root, &note_link).is_err());
         assert!(save(&root, &note_link, "outside", "replacement").is_err());
         assert_eq!(fs::read_to_string(&outside_note)?, "outside");
         Ok(())
