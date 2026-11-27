@@ -2,17 +2,9 @@
     grid-template-rows: auto minmax(0, 1fr) auto auto;
 }
 
-.terminal-launcher,
 .terminal-panel {
     grid-row: 4;
     border-top: 1px solid var(--workspace-rule);
-}
-
-.terminal-launcher {
-    padding-inline: 8px;
-}
-
-.terminal-panel {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     height: clamp(92px, 31dvh, 24rem);
@@ -43,7 +35,7 @@
     white-space: nowrap;
 }
 
-.workspace :is(.terminal-launcher, .terminal-header) button {
+.workspace .terminal-header button {
     border: 0;
     font-size: 12px;
 }

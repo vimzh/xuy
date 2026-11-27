@@ -34,7 +34,7 @@ The title bar and filename hide when you type, and the text stays in place. Move
 
 ## Use the notebook terminal
 
-Click **Terminal** at the bottom of an open notebook, or press `⌘K` and choose **Open Terminal**. The shell starts in the folder shown in the sidebar. Run your preferred CLI there, including any LLM tool you have installed.
+With a notebook open, press `⌘K` and choose **Open Terminal**. The shell starts in the folder shown in the sidebar. Run your preferred CLI there, including any LLM tool you have installed.
 
 Use **Minimize Terminal** in `⌘K` to hide the terminal while its commands keep running. **Open Terminal** restores that session. **Close Terminal** ends it. The panel also has **Minimize** and **Close** buttons. Switching notebooks or returning Home ends the current session.
 

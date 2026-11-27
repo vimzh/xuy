@@ -54,7 +54,7 @@ pub(crate) fn Workspace(
     mut pending: Signal<Option<OpenNotebook>>,
     mut palette_command: Signal<Option<&'static str>>,
     mut page_actions: Signal<PageActions>,
-    mut terminal_state: Signal<terminal::State>,
+    terminal_state: Signal<terminal::State>,
     modal_open: Memo<bool>,
     on_switch: EventHandler<OpenNotebook>,
     on_home: EventHandler<()>,
@@ -749,12 +749,6 @@ pub(crate) fn Workspace(
             }
             if let Some(path) = selected() {
                 NoteStatusBar { key: "{path:?}", filename, summary }
-            }
-            if terminal_state() != terminal::State::Visible {
-                div { class: "terminal-launcher",
-                    button { r#type: "button", aria_controls: (terminal_state() == terminal::State::Minimized).then_some("terminal-panel"), aria_expanded: false,
-                        onclick: move |_| terminal_state.set(terminal::State::Visible), "Terminal" }
-                }
             }
             if terminal_state() != terminal::State::Closed {
                 TerminalPanel { state: terminal_state, folder: directory(), zoom }
