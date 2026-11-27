@@ -2,10 +2,11 @@
 
 use dioxus::prelude::*;
 
+use crate::ui::{Button, ButtonKind};
 use crate::appearance::{ScenePreferences, SceneSelect};
 use crate::cursor::{CursorOptions, CursorSettings};
 use crate::font_size::{FontPreference, FontSizeSelect};
-use crate::modal::show_dialog;
+use crate::modal::run_dialog;
 use crate::page_width::{PageWidth, PageWidthSelect};
 use crate::theme::{Appearance, ThemeSelect};
 use crate::writing_style::{WritingStyle, WritingStyleSettings};
@@ -25,9 +26,18 @@ pub(crate) fn Settings(
     let font_size = settings_font();
     rsx! {
         document::Stylesheet { href: asset!("/assets/settings.css") }
+        div { id: "settings-scrim", aria_hidden: true,
+            onclick: move |_| {
+                document::eval("document.getElementById('app-settings').close()");
+            },
+        }
         dialog { id: "app-settings", class: "app-dialog", aria_labelledby: "settings-title",
+            aria_modal: true,
             style: "font-size: {font_size}px",
-            onmounted: move |_| show_dialog("app-settings", on_close),
+            onmounted: move |_| async move {
+                run_dialog("app-settings", include_str!("settings_dialog.js")).await;
+                on_close.call(());
+            },
             h1 { id: "settings-title", "Settings" }
             ThemeSelect { appearance }
             SceneSelect { dark: dark(), preferences: scenes }
@@ -44,7 +54,7 @@ pub(crate) fn Settings(
             }
             CursorSettings { cursor }
             form { method: "dialog",
-                button { r#type: "submit", "Done" }
+                Button { kind: ButtonKind::Submit, "Done" }
             }
         }
     }
