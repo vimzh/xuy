@@ -1,4 +1,10 @@
 [bundle]
 identifier = "io.github.vimzh.xuy"
 publisher = "vimzh"
-icon = ["assets/xuy.icns"]
+icon = ["assets/xuy.icns", "assets/xuy.png"]
+
+[bundle.macos]
+minimum_system_version = "14.5"
+
+[bundle.deb]
+depends = ["libgtk-3-0", "libwebkit2gtk-4.1-0", "libxdo3"]

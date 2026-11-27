@@ -41,7 +41,13 @@ impl Session {
         let mut shell = CommandBuilder::new(
             env::var_os("SHELL")
                 .filter(|shell| !shell.is_empty())
-                .unwrap_or_else(|| "/bin/zsh".into()),
+                .unwrap_or_else(|| {
+                    if cfg!(target_os = "macos") {
+                        "/bin/zsh".into()
+                    } else {
+                        "/bin/sh".into()
+                    }
+                }),
         );
         shell.cwd(folder);
         shell.arg("-l");

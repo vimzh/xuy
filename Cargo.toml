@@ -1,5 +1,5 @@
 [package]
-name = "dojo"
+name = "xuy"
 version = "0.1.0"
 edition = "2024"
 
@@ -16,6 +16,9 @@ syntect = { version = "5.3", default-features = false, features = ["default-synt
 tempfile = "3.27"
 time = { version = "0.3", features = ["local-offset"] }
 tokio = { version = "1", features = ["macros", "rt", "sync", "time"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+rfd = { version = "0.17.2", default-features = false, features = ["gtk3"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 libc = "0.2"
