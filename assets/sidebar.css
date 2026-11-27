@@ -10,40 +10,38 @@
 
 .workspace .notebook-sidebar button {
     border: 0;
-    border-radius: 0;
+    border-radius: 4px;
     font: inherit;
     text-align: left;
 }
 
-.workspace .notebook-sidebar button:enabled:hover {
-    background: var(--hover);
-}
-
 .sidebar-entry-icon {
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
 }
 
 .sidebar-entries {
     min-height: 0;
     margin: 0;
-    padding: 0;
+    padding: 2px 4px;
     overflow: auto;
     list-style: none;
+    user-select: none;
 }
 
 .sidebar-entries li {
+    padding-block: 1px;
     border-bottom: 1px solid var(--workspace-rule);
 }
 
 .workspace .notebook-sidebar .sidebar-entry {
     display: grid;
-    grid-template-columns: 15px minmax(0, 1fr) auto;
+    grid-template-columns: 16px minmax(0, 1fr) auto;
     align-items: center;
-    column-gap: 8px;
+    column-gap: 7px;
     width: 100%;
-    min-height: 24px;
-    padding: 2px 11px;
+    min-height: 28px;
+    padding: 4px 7px;
 }
 
 .workspace .notebook-sidebar .sidebar-entry[aria-current="true"] {
