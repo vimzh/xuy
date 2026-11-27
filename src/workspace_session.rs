@@ -53,24 +53,12 @@ pub(crate) fn load() -> io::Result<Option<WorkspaceSession>> {
 pub(crate) fn save(root: &Path, folder: &Path, note: Option<&Path>) -> io::Result<()> {
     #[cfg(target_os = "macos")]
     {
-        let paths = [root, folder]
-            .into_iter()
-            .chain(note)
-            .map(|path| {
-                path.to_str().map(NSString::from_str).ok_or_else(|| {
-                    io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        format!("Cannot remember path {} as text", path.display()),
-                    )
-                })
-            })
-            .collect::<io::Result<Vec<_>>>()?;
-        let paths = NSArray::from_retained_slice(&paths);
         // A single property-list entry keeps all three paths in step.
-        unsafe {
-            NSUserDefaults::standardUserDefaults()
-                .setObject_forKey(Some(&paths), &NSString::from_str(KEY));
-        }
+        crate::notebook::locations::save_paths(
+            KEY,
+            [root, folder].into_iter().chain(note),
+            "Cannot remember path",
+        )?;
     }
     #[cfg(not(target_os = "macos"))]
     let _ = (root, folder, note);

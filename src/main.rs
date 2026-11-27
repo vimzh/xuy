@@ -37,6 +37,7 @@ use dioxus::prelude::*;
 use font_size::FontPreference;
 use std::path::PathBuf;
 
+use crate::notebook::locations;
 use crate::ui::Button;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -85,8 +86,8 @@ fn App() -> Element {
     let mut settings_open = use_signal(|| false);
     let mut guide_open = use_signal(|| false);
     let mut picker_open = use_signal(|| false);
-    let saved = use_signal(notebook_picker::load);
-    let recent = use_signal(notebook_picker::load_recent);
+    let saved = use_signal(locations::load_saved);
+    let recent = use_signal(locations::load_recent);
     let mut show_performance = use_signal(|| false);
     let mut opening = use_signal(|| true);
     let mut error = use_signal(|| None::<String>);
@@ -110,7 +111,7 @@ fn App() -> Element {
     });
     use_effect(move || {
         if let Some(notebook) = opened.read().as_ref()
-            && let Err(failure) = notebook_picker::record_open(recent, notebook.root())
+            && let Err(failure) = locations::record_open(recent, notebook.root())
         {
             error.set(Some(format!(
                 "Could not save recently opened notebooks. {failure}"
@@ -166,7 +167,7 @@ fn App() -> Element {
                 if matches!(
                     action,
                     ChooseFolder::NewNotebook | ChooseFolder::AddNotebook
-                ) && let Err(failure) = notebook_picker::register(saved, notebook.root())
+                ) && let Err(failure) = locations::register(saved, notebook.root())
                 {
                     error.set(Some(failure.to_string()));
                 } else if !add {
