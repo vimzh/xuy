@@ -6,11 +6,11 @@ xuy is a minimal, monochrome personal notes app for macOS, built in Rust with Di
 
 | Area | Requirement | Acceptance check |
 | --- | --- | --- |
-| Launch screen | Center the xuy name and show **New Page**, **Notebook Settings**, and **Docs**, with **Recently Opened** below. Use a light, monochrome layout for the initial screen. | Launch the app to see the centered name, all three options, and the recent-pages section on white. |
+| Launch screen | Center the xuy name and show **New Page**, **Notebook Settings**, and **Docs**, with **Recently Opened** below. Use a light, monochrome layout with monospace text throughout. | Launch the app to see the centered name, all three options, and the recent-pages section in monospace on white. |
 | Sidebar | Show a **New Note** action and **Folders**. | The sidebar exposes those two entries. |
 | Notes | Create a note, write and edit its content, and reopen it later. | Create a note, enter text, switch away, and reopen it with the saved text intact. |
 | Folders | Create folders and use them to organize and browse notes. | Create a folder, place a note in it, and reopen the note by browsing that folder. |
-| Fonts | Offer iA Writer Mono, iA Writer Duo, and iA Writer Quattro. [iA’s font downloads](https://ia.net/downloads/fonts) | Check that the picker lists exactly those three families and applies each one to the editor when selected. |
+| Fonts | Offer iA Writer Mono, iA Writer Duo, iA Writer Quattro, and Helvetica Neue. [iA’s font downloads](https://ia.net/downloads/fonts) | Check that the picker lists all four families and applies each one to the editor when selected. |
 
 ## Working assumptions
 
@@ -25,4 +25,4 @@ xuy is a minimal, monochrome personal notes app for macOS, built in Rust with Di
 
 1. Run a minimal Dioxus desktop window on the Mac with `dx serve --desktop`.
 2. Build the launch screen, then the sidebar and editor as the visual direction is established.
-3. Implement notes, folders, local persistence, and the three-font picker. Verify the first-version checks on the Mac.
+3. Implement notes, folders, local persistence, and the editor font picker. Verify the first-version checks on the Mac.
