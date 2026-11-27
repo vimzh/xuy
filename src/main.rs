@@ -1,4 +1,5 @@
 mod chrome;
+mod dropdown;
 mod editor;
 mod note_history;
 mod notebook;

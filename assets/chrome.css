@@ -131,13 +131,11 @@
     background: transparent;
 }
 
-.workspace .notebook-chrome button:enabled:hover,
-.chrome-width:hover {
+.workspace .notebook-chrome button:enabled:hover {
     background: #f3f3f3;
 }
 
-.workspace .notebook-chrome button:focus-visible,
-.chrome-width:has(select:focus-visible) {
+.workspace .notebook-chrome button:focus-visible {
     outline: 2px solid #666;
     outline-offset: -2px;
 }
@@ -155,29 +153,6 @@
     margin-inline-end: 9px;
 }
 
-.chrome-width {
-    position: relative;
-    display: grid;
-    place-items: center;
-    width: 26px;
-    height: 18px;
-    border-radius: 4px;
-}
-
-/* Keep the native select clickable and keyboard accessible over the width icon. */
-.chrome-width select {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-}
-
-.workspace .notebook-chrome .chrome-preview[aria-pressed="true"] {
-    background: #ebebeb;
-}
-
 @media (max-width: 520px) {
     .notebook-chrome {
         --chrome-left-inset: 76px;
@@ -192,7 +167,7 @@
     }
 
     .workspace .notebook-chrome button,
-    .chrome-width {
+    .chrome-right .dropdown {
         width: 22px;
     }
 }

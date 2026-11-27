@@ -6,6 +6,7 @@ use dioxus::desktop::use_window;
 use dioxus::prelude::*;
 use dioxus_elements::input_data::MouseButton;
 
+use crate::dropdown::Dropdown;
 use crate::page_width::{PageWidth, PageWidthSelect};
 
 #[component]
@@ -103,23 +104,26 @@ pub(crate) fn NotebookChrome(
                         }
                     }
                     div { class: "chrome-right", role: "group", aria_label: "Writing controls",
-                        div { class: "chrome-width",
-                            img { src: "{icons}/arrow-horizontal.svg", alt: "", width: "18", height: "18" }
+                        Dropdown { icon: "{icons}/arrow-horizontal.svg",
                             PageWidthSelect {
                                 label: "Writing width",
                                 width: page_width(),
                                 on_change: move |width| page_width.set(width),
                             }
                         }
-                        button {
-                            class: "chrome-preview",
-                            r#type: "button",
-                            aria_label: "Preview",
-                            aria_pressed: preview,
-                            title: if preview { "Edit source" } else { "Show preview" },
-                            disabled: !can_preview,
-                            onclick: move |_| on_preview.call(()),
-                            img { src: "{icons}/view.svg", alt: "", width: "18", height: "18" }
+                        Dropdown { icon: "{icons}/view.svg", active: preview,
+                            select {
+                                aria_label: "View mode",
+                                title: "View mode",
+                                disabled: !can_preview,
+                                onchange: move |event| {
+                                    if (event.value() == "preview") != preview {
+                                        on_preview.call(());
+                                    }
+                                },
+                                option { value: "edit", selected: !preview, "Edit" }
+                                option { value: "preview", selected: preview, "Preview" }
+                            }
                         }
                     }
                 }

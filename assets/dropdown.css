@@ -1,0 +1,109 @@
+.dropdown {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 18px;
+    border-radius: 4px;
+}
+
+.dropdown > select {
+    position: absolute;
+    inset: 0;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.dropdown:has(select:enabled:hover),
+.dropdown[data-active="true"] {
+    background: #ebebeb;
+}
+
+.dropdown:has(select:focus-visible) {
+    outline: 2px solid #666;
+    outline-offset: -2px;
+}
+
+.dropdown:has(select:disabled) {
+    opacity: .34;
+}
+
+.dropdown > select:disabled {
+    cursor: default;
+}
+
+@supports (appearance: base-select) {
+    .dropdown > select,
+    .dropdown > select::picker(select) {
+        appearance: base-select;
+    }
+
+    .dropdown > select {
+        min-width: 0;
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: transparent;
+        opacity: 1;
+    }
+
+    .dropdown > select::picker-icon {
+        display: none;
+    }
+
+    .dropdown:has(select:open) {
+        background: #ebebeb;
+    }
+
+    .dropdown > select::picker(select) {
+        position-area: block-end span-inline-start;
+        justify-self: end;
+        min-width: 132px;
+        margin-block-start: 6px;
+        padding: 4px;
+        border: 1px solid #dedbd6;
+        border-radius: 7px;
+        background: #fff;
+        color: #202020;
+        box-shadow: 0 5px 18px rgb(0 0 0 / 10%);
+        font: 12px/1.35 Menlo, monospace;
+    }
+
+    .dropdown option {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 27px;
+        padding: 4px 8px;
+        border-radius: 4px;
+    }
+
+    .dropdown option:checked {
+        background: #f5f3f0;
+    }
+
+    .dropdown option:is(:hover, :focus-visible) {
+        background: #ebebeb;
+    }
+
+    .dropdown option::checkmark {
+        order: 1;
+        margin-inline-start: auto;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .dropdown > select:open::picker(select) {
+            animation: dropdown-enter 120ms ease-out;
+        }
+    }
+}
+
+@keyframes dropdown-enter {
+    from {
+        opacity: 0;
+        transform: translateY(-3px);
+    }
+}
