@@ -15,10 +15,10 @@ fn main() {
 fn App() -> Element {
     let icons = asset!("/assets/hugeicons", AssetOptions::folder());
     let actions = [
-        ("new", "⌘N", "add-01"),
-        ("open", "⌘O", "folder-open"),
-        ("settings", "⌘,", "settings-01"),
-        ("docs", "⌘D", "book-open-01"),
+        ("new", "N", "add-01"),
+        ("open", "O", "folder-open"),
+        ("settings", ",", "settings-01"),
+        ("docs", "D", "book-open-01"),
     ];
 
     rsx! {
@@ -30,7 +30,10 @@ fn App() -> Element {
                     button { key: "{label}", disabled: true,
                         img { src: "{icons}/{icon}.svg", alt: "", width: "16", height: "16" }
                         span { "{label}" }
-                        kbd { aria_hidden: true, "{shortcut}" }
+                        kbd { aria_hidden: true,
+                            span { class: "command-key", "⌘" }
+                            span { "{shortcut}" }
+                        }
                     }
                 }
             }

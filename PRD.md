@@ -6,7 +6,7 @@ xuy is a minimal, monochrome personal notes app for macOS, built in Rust with Di
 
 | Area | Requirement | Acceptance check |
 | --- | --- | --- |
-| Launch screen | Center the xuy name and show **new**, **open**, **settings**, and **docs** in that order, one option per row, with **Recently Opened** below. Use a light, monochrome layout with monospace text throughout. | Launch the app to see four outlined buttons in a narrow centered column. Each row has a Hugeicons outline icon followed by its label on the left and a boxed placeholder shortcut on the right. |
+| Launch screen | Center the xuy name and show **new**, **open**, **settings**, and **docs** in that order, one option per row, with **Recently Opened** below. Use a light, monochrome layout with monospace text throughout. | Launch the app to see four borderless rows in a narrow centered column. Each row has a Hugeicons outline icon followed by its label on the left and a boxed placeholder shortcut on the right. |
 | Sidebar | Show a **New Note** action and **Folders**. | The sidebar exposes those two entries. |
 | Notes | Create a note, write and edit its content, and reopen it later. | Create a note, enter text, switch away, and reopen it with the saved text intact. |
 | Folders | Create folders and use them to organize and browse notes. | Create a folder, place a note in it, and reopen the note by browsing that folder. |
