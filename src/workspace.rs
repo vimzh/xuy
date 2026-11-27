@@ -70,7 +70,6 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
                 Ok(children) => {
                     entries.set(children);
                     directory.set(path);
-                    naming.set(false);
                 }
                 Err(failure) => error.set(Some(failure.to_string())),
             }
@@ -168,11 +167,6 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
                         if confirmed { on_home.call(()); }
                     },
                     on_browse: move |entry| async move { browse(entry).await },
-                    on_new: move |_| {
-                        name.set(String::new());
-                        error.set(None);
-                        naming.set(true);
-                    },
                 }
                 div { class: "workspace-content",
                     if let Some(message) = error() {
@@ -222,7 +216,6 @@ fn FolderList(
     busy: bool,
     on_home: EventHandler<()>,
     on_browse: EventHandler<Entry>,
-    on_new: EventHandler<()>,
 ) -> Element {
     let parent = (directory != root)
         .then(|| directory.parent().map(Path::to_owned))
@@ -240,7 +233,6 @@ fn FolderList(
         aside { class: "folder-list", aria_label: "Notebook files",
             div { class: "folder-toolbar",
                 button { disabled: busy, onclick: move |_| on_home.call(()), "Home" }
-                button { disabled: busy, onclick: move |_| on_new.call(()), "New note" }
                 if let Some(parent) = parent {
                     button { disabled: busy, onclick: move |_| on_browse.call(Entry { path: parent.clone(), is_dir: true }), "Up" }
                 }
