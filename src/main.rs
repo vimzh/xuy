@@ -20,6 +20,7 @@ fn App() -> Element {
             nav { aria_label: "Notebook actions",
                 button { disabled: true, "New Page" }
                 button { disabled: true, "Notebook Settings" }
+                button { disabled: true, "Docs" }
             }
             section { aria_labelledby: "recent-heading",
                 h2 { id: "recent-heading", "Recently Opened" }
