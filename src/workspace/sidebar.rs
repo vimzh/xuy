@@ -6,9 +6,9 @@ use std::time::Duration;
 use dioxus::prelude::{dioxus_core::use_drop, *};
 use time::OffsetDateTime;
 
+use crate::commands::native::{NEW_FOLDER, NEW_NOTE};
 use crate::notebook::Entry;
-use crate::notebook_index::{FolderIndex, local_today, modified_label, use_indexed_rows};
-use crate::notebook_menu::{NEW_FOLDER, NEW_NOTE};
+use crate::notebook::index::{FolderIndex, local_today, modified_label, use_indexed_rows};
 use crate::ui::Button;
 
 #[component]

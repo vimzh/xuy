@@ -6,9 +6,8 @@ use std::path::{Path, PathBuf};
 use rfd::AsyncFileDialog;
 
 use crate::notebook::{self, Entry};
-use crate::workspace_session::WorkspaceSession;
 
-use super::on_disk;
+use super::{on_disk, session::WorkspaceSession};
 
 #[derive(Clone, PartialEq)]
 pub(crate) struct OpenNotebook {

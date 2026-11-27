@@ -7,7 +7,7 @@ use dioxus::prelude::*;
 use dioxus_elements::input_data::MouseButton;
 
 use crate::editor::ViewMode;
-use crate::page_width::{PageWidth, PageWidthSelect};
+use crate::settings::page_width::{PageWidth, PageWidthSelect};
 use crate::ui::{Button, Dropdown};
 
 #[component]

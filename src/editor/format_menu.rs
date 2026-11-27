@@ -2,8 +2,9 @@
 
 use dioxus::prelude::{dioxus_core::use_drop, *};
 
-use crate::highlight::Color;
 use crate::ui::Button;
+
+use super::highlight::Color;
 
 #[component]
 pub(super) fn FormatMenu(

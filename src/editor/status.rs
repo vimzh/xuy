@@ -3,7 +3,7 @@
 use dioxus::prelude::{dioxus_core::use_drop, *};
 use pulldown_cmark::{Event, Parser, Tag, TagEnd};
 
-use crate::highlight;
+use super::highlight;
 use crate::markdown::{OPTIONS as MARKDOWN_OPTIONS, append_plain_text};
 
 #[component]

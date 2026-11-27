@@ -3,9 +3,10 @@
 use dioxus::prelude::{dioxus_core::use_drop, *};
 use tokio::time::{Duration, sleep};
 
-use crate::editor::{render_editable_preview, render_preview};
-use crate::markdown_paths::MarkdownPaths;
-use crate::preview_edit::{EditableText, PreviewEdits};
+use crate::markdown::edits::{EditableText, PreviewEdits};
+use crate::markdown::paths::MarkdownPaths;
+
+use super::{render_editable_preview, render_preview};
 
 pub(crate) type PreviewTarget = (String, bool);
 

@@ -1,5 +1,9 @@
 //! Renders Markdown with safe links, images, and stable heading anchors.
 
+pub(crate) mod edits;
+pub(crate) mod paths;
+mod syntax;
+
 use std::{collections::HashMap, ops::Range, path::Path};
 
 use linkify::{LinkFinder, LinkKind};
@@ -7,10 +11,8 @@ use percent_encoding::{NON_ALPHANUMERIC, percent_decode_str, utf8_percent_encode
 use pulldown_cmark::utils::TextMergeWithOffset;
 use pulldown_cmark::{CowStr, Event, LinkType, Options, Parser, Tag, TagEnd, html};
 
-use crate::markdown_paths::MarkdownPaths;
-use crate::preview_edit::EditableText;
-
-mod syntax;
+use crate::markdown::edits::EditableText;
+use crate::markdown::paths::MarkdownPaths;
 
 pub(crate) const OPTIONS: Options = Options::ENABLE_TABLES
     .union(Options::ENABLE_STRIKETHROUGH)
@@ -454,7 +456,7 @@ mod tests {
 
     #[test]
     fn edit_ranges_preserve_nested_formatting_and_reference_links() {
-        use crate::preview_edit::PreviewEdits;
+        use crate::markdown::edits::PreviewEdits;
 
         let source = "**_Bold_** with [label][id].\n\n[id]: https://example.org";
         let (html, runs) = render_editable(source, None, |_| false);
@@ -614,7 +616,7 @@ mod tests {
         let notebook = tempfile::tempdir().unwrap();
         let root = notebook.path().canonicalize().unwrap();
         std::fs::write(root.join("picture.png"), b"\x89PNG\r\n\x1a\n").unwrap();
-        let paths = crate::markdown_paths::MarkdownPaths::new(root.clone(), root.join("note.md"));
+        let paths = crate::markdown::paths::MarkdownPaths::new(root.clone(), root.join("note.md"));
 
         let html = render(
             "![Picture](picture.png) ![*Missing*](missing.png)",

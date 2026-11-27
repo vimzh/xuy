@@ -8,7 +8,7 @@ use dioxus::desktop::DesktopContext;
 use dioxus::prelude::*;
 use tempfile::TempPath;
 
-use crate::markdown_paths::{MarkdownPaths, read_image};
+use crate::markdown::paths::{MarkdownPaths, read_image};
 
 pub(super) async fn insert(
     paths: MarkdownPaths,

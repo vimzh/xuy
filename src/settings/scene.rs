@@ -2,7 +2,7 @@ use std::{hash::BuildHasher, hash::RandomState, sync::OnceLock};
 
 use dioxus::prelude::*;
 
-use crate::command_bar::Command;
+use crate::commands::palette::Command;
 
 #[cfg(target_os = "macos")]
 use objc2_foundation::{NSString, NSUserDefaults};

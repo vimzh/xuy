@@ -4,8 +4,8 @@ use std::ops::Range;
 
 use dioxus::prelude::*;
 
+use super::{highlight::Color, status::NoteSummary};
 use crate::ui::Button;
-use crate::{highlight::Color, note_status::NoteSummary};
 
 #[component]
 pub(crate) fn WritingSidebar(

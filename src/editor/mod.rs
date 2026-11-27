@@ -1,17 +1,21 @@
+mod format_menu;
+mod highlight;
+mod image_drop;
+pub(crate) mod preview;
+pub(crate) mod status;
+mod tools;
+
 use dioxus::desktop::{DesktopContext, use_window};
 use dioxus::html::HasFileData;
 use dioxus::prelude::{dioxus_core::use_drop, *};
 
-use crate::cursor::CursorOptions;
-use crate::highlight::{self, Color};
+use self::highlight::Color;
+use self::tools::WritingSidebar;
+use crate::editor::preview::{MarkdownPreview, PreviewTarget};
+use crate::editor::status::NoteSummary;
 use crate::markdown;
-use crate::markdown_paths::MarkdownPaths;
-use crate::markdown_preview::{MarkdownPreview, PreviewTarget};
-use crate::note_status::NoteSummary;
-use crate::writing_sidebar::WritingSidebar;
-
-mod format_menu;
-mod image_drop;
+use crate::markdown::paths::MarkdownPaths;
+use crate::settings::cursor::CursorOptions;
 
 use format_menu::FormatMenu;
 
@@ -223,7 +227,7 @@ fn MarkdownInput(
                 readonly: busy,
                 value: "{draft}",
                 onmounted: move |_| tracker.set(Some(document::eval(concat!(
-                    include_str!("editor/code_blocks.js"),
+                    include_str!("code_blocks.js"),
                     "\n",
                     include_str!("editor_caret.js"),
                 )))),
@@ -391,7 +395,7 @@ pub(crate) fn render_preview(source: &str, paths: Option<&MarkdownPaths>) -> Str
 pub(crate) fn render_editable_preview(
     source: &str,
     paths: &MarkdownPaths,
-) -> (String, Vec<crate::preview_edit::EditableText>) {
+) -> (String, Vec<crate::markdown::edits::EditableText>) {
     let marks = highlight::marks(source);
     let mut offsets = highlight::mark_offsets(&marks).peekable();
     markdown::render_editable(source, Some(paths), |offset| {
@@ -402,8 +406,8 @@ pub(crate) fn render_editable_preview(
 #[cfg(test)]
 mod tests {
     use super::{prepare_highlight, render_markdown};
-    use crate::highlight::{Color, strip_rendered_marks};
-    use crate::note_status::NoteSummary;
+    use crate::editor::highlight::{Color, strip_rendered_marks};
+    use crate::editor::status::NoteSummary;
 
     fn apply(source: &str, selected: &str, color: Option<Color>) -> String {
         let start = source[..source.find(selected).unwrap()]

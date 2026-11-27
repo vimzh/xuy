@@ -1,9 +1,15 @@
 //! Available command bar actions and their current settings.
 
-use crate::terminal::{self, State};
+pub(crate) mod native;
+pub(crate) mod palette;
+
+use crate::workspace::terminal::{self, State};
 use crate::{
-    command_bar::Command, editor::ViewMode, notebook_menu, page_width::PageWidth, theme::Appearance,
+    editor::ViewMode,
+    settings::{page_width::PageWidth, theme::Appearance},
 };
+
+use self::palette::Command;
 
 pub(crate) const PREVIOUS_PAGE: &str = "previous-page";
 pub(crate) const NEXT_PAGE: &str = "next-page";
@@ -59,7 +65,7 @@ pub(crate) struct PageActions {
 }
 
 pub(crate) fn notebook_commands(in_notebook: bool, page: PageActions) -> Vec<Command> {
-    use notebook_menu::*;
+    use native::*;
     let mut commands = vec![
         Command::new(
             NEW_NOTEBOOK,
@@ -167,7 +173,7 @@ pub(crate) fn settings(
     width: PageWidth,
     edit_in_preview: bool,
 ) -> impl Iterator<Item = Command> {
-    let themes = crate::theme::OPTIONS.map(|(option, id, _)| {
+    let themes = crate::settings::theme::OPTIONS.map(|(option, id, _)| {
         let label = match option {
             Appearance::System => "System",
             Appearance::Light => "Light",
@@ -193,7 +199,7 @@ pub(crate) fn settings(
         .setting_value(label, width == option)
     });
     let preview_editing = Command::new(
-        notebook_menu::TOGGLE_PREVIEW_EDITING,
+        native::TOGGLE_PREVIEW_EDITING,
         if edit_in_preview {
             "Disable Editing in Preview"
         } else {

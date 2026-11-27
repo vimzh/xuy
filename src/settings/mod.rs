@@ -1,14 +1,22 @@
 //! App Settings for appearance and the editor.
 
+pub(crate) mod cursor;
+pub(crate) mod font_size;
+pub(crate) mod page_width;
+pub(crate) mod scene;
+pub(crate) mod theme;
+pub(crate) mod writing_style;
+pub(crate) mod zoom;
+
 use dioxus::prelude::*;
 
-use crate::appearance::{ScenePreferences, SceneSelect};
-use crate::cursor::{CursorOptions, CursorSettings};
-use crate::font_size::{FontPreference, FontSizeSelect};
-use crate::page_width::{PageWidth, PageWidthSelect};
-use crate::theme::{Appearance, ThemeSelect};
+use self::scene::{ScenePreferences, SceneSelect};
+use crate::settings::cursor::{CursorOptions, CursorSettings};
+use crate::settings::font_size::{FontPreference, FontSizeSelect};
+use crate::settings::page_width::{PageWidth, PageWidthSelect};
+use crate::settings::theme::{Appearance, ThemeSelect};
+use crate::settings::writing_style::{WritingStyle, WritingStyleSettings};
 use crate::ui::{Button, ButtonKind, Dialog, DialogScrim};
-use crate::writing_style::{WritingStyle, WritingStyleSettings};
 
 #[component]
 pub(crate) fn Settings(

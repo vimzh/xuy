@@ -45,7 +45,7 @@ thread_local! {
     static COMMANDS: RefCell<Option<Commands>> = const { RefCell::new(None) };
 }
 
-pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
+pub(crate) fn build(appearance: crate::settings::theme::Appearance) -> Menu {
     let app = Submenu::with_items(
         "xuy",
         true,
@@ -70,7 +70,7 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
                 Some(Accelerator::new(Some(Modifiers::SUPER), Code::KeyI)),
             ),
             &PredefinedMenuItem::separator(),
-            &crate::theme::menu(appearance),
+            &crate::settings::theme::menu(appearance),
             &PredefinedMenuItem::fullscreen(None),
             &PredefinedMenuItem::separator(),
             &PredefinedMenuItem::hide(None),

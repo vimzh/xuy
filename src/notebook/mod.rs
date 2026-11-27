@@ -1,12 +1,14 @@
 //! Filesystem operations for a local folder of Markdown notes.
 
+pub(crate) mod index;
+pub(crate) mod locations;
+pub(crate) mod picker;
+
 use std::ffi::OsStr;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
 use std::time::SystemTime;
-
-pub(crate) mod locations;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Entry {

@@ -2,7 +2,7 @@
 
 use dioxus::prelude::{dioxus_core::spawn_forever, *};
 
-use crate::command_bar::Command;
+use crate::commands::palette::Command;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) enum CursorShape {

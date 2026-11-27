@@ -1,5 +1,13 @@
 //! The folder browser and its active Markdown note.
 
+mod chrome;
+mod external_edit;
+mod history;
+mod open;
+pub(crate) mod session;
+mod sidebar;
+pub(crate) mod terminal;
+
 use std::io;
 use std::path::Path;
 
@@ -10,27 +18,23 @@ use tokio::{
     time::{Duration, Instant, sleep_until},
 };
 
-use crate::chrome::NotebookChrome;
-use crate::commands::{self, PageActions};
-use crate::cursor::CursorOptions;
+use self::chrome::NotebookChrome;
+use self::external_edit::{Conflict, ExternalEditNotice, Revision};
+use self::history::NoteHistory;
+use self::sidebar::{SidebarDivider, WorkspaceSidebar};
+use self::terminal::TerminalPanel;
+use crate::app::performance::PerformancePanel;
+use crate::commands::{self, PageActions, native};
+use crate::editor::preview::PreviewTarget;
+use crate::editor::status::{NoteStatusBar, NoteSummary};
 use crate::editor::{Editor, ViewMode};
-use crate::external_edit::{self, Conflict, ExternalEditNotice, Revision};
-use crate::markdown_paths::MarkdownPaths;
-use crate::markdown_preview::PreviewTarget;
-use crate::note_history::NoteHistory;
-use crate::note_status::{NoteStatusBar, NoteSummary};
+use crate::markdown::paths::MarkdownPaths;
+use crate::notebook::index::{NoteTime, use_folder_index};
 use crate::notebook::{self, Entry};
-use crate::notebook_index::{NoteTime, use_folder_index};
-use crate::notebook_menu;
-use crate::page_width::PageWidth;
-use crate::performance::PerformancePanel;
-use crate::terminal::{self, TerminalPanel};
+use crate::settings::cursor::CursorOptions;
+use crate::settings::page_width::PageWidth;
+use crate::settings::writing_style::WritingStyle;
 use crate::ui::{Button, ButtonKind};
-use crate::workspace_session;
-use crate::workspace_sidebar::{SidebarDivider, WorkspaceSidebar};
-use crate::writing_style::WritingStyle;
-
-mod open;
 
 pub(crate) use open::{OpenNotebook, pick_notebook};
 
@@ -164,7 +168,7 @@ pub(crate) fn Workspace(
     use_effect(move || {
         if remember_location()
             && let Err(failure) =
-                workspace_session::save(&root.peek(), &directory.read(), selected.read().as_deref())
+                session::save(&root.peek(), &directory.read(), selected.read().as_deref())
         {
             error.set(Some(failure.to_string()));
         }
@@ -541,21 +545,21 @@ pub(crate) fn Workspace(
     };
     let mut run_command = move |id: &str| match id {
         _ if *modal_open.peek() || pending.peek().is_some() => {}
-        notebook_menu::NEW_NOTE => begin(NewEntry::Note),
-        notebook_menu::NEW_FOLDER => begin(NewEntry::Folder),
-        notebook_menu::HOME => {
+        native::NEW_NOTE => begin(NewEntry::Note),
+        native::NEW_FOLDER => begin(NewEntry::Folder),
+        native::HOME => {
             spawn(async move {
                 if leave().await {
                     on_home.call(());
                 }
             });
         }
-        notebook_menu::TOGGLE_SIDEBAR => toggle_sidebar(()),
-        notebook_menu::TOGGLE_PREVIEW => {
+        native::TOGGLE_SIDEBAR => toggle_sidebar(()),
+        native::TOGGLE_PREVIEW => {
             let next = view_mode.peek().toggle_preview();
             change_view(next);
         }
-        notebook_menu::TOGGLE_SPLIT => {
+        native::TOGGLE_SPLIT => {
             let next = view_mode.peek().toggle_split();
             change_view(next);
         }
@@ -568,9 +572,9 @@ pub(crate) fn Workspace(
         commands::INSERT_CODE_BLOCK if selected.peek().is_some() && !*busy.peek() => {
             spawn(async move {
                 let mut edit = document::eval(concat!(
-                    include_str!("editor/code_blocks.js"),
+                    include_str!("../editor/code_blocks.js"),
                     "\n",
-                    include_str!("editor/insert_code_block.js"),
+                    include_str!("../editor/insert_code_block.js"),
                 ));
                 let result = edit.recv::<Option<String>>().await;
                 let _ = edit.send(());
@@ -583,7 +587,7 @@ pub(crate) fn Workspace(
                 }
             });
         }
-        notebook_menu::SAVE => {
+        native::SAVE => {
             spawn(save(None));
         }
         _ => {}
@@ -607,7 +611,7 @@ pub(crate) fn Workspace(
         if *page_actions.peek() != actions {
             page_actions.set(actions);
         }
-        notebook_menu::update(
+        native::update(
             true,
             actions.has_page && (!busy() || saving()) && !modal_open(),
             actions.view_mode,
@@ -615,7 +619,7 @@ pub(crate) fn Workspace(
             busy(),
         );
     });
-    use_drop(|| notebook_menu::update(false, false, ViewMode::Edit, false, false));
+    use_drop(|| native::update(false, false, ViewMode::Edit, false, false));
 
     let filename = match selected.read().as_ref() {
         Some(path) => display_name(path),

@@ -192,7 +192,10 @@ pub(crate) fn CommandBar(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{commands, editor::ViewMode, notebook_menu};
+    use crate::{
+        commands::{self, native},
+        editor::ViewMode,
+    };
 
     #[test]
     fn filters_by_words_and_aliases_in_the_current_workspace() {
@@ -200,13 +203,10 @@ mod tests {
         let editing = commands::notebook_commands(true, commands::PageActions::default());
         assert_eq!(
             matching_commands(&home, " NEW  NOTEBOOK ")[0].id,
-            notebook_menu::NEW_NOTEBOOK
+            native::NEW_NOTEBOOK
         );
         assert!(matching_commands(&home, "go home").is_empty());
-        assert_eq!(
-            matching_commands(&editing, "landing")[0].id,
-            notebook_menu::HOME
-        );
+        assert_eq!(matching_commands(&editing, "landing")[0].id, native::HOME);
         assert!(matching_commands(&editing, "unrelated").is_empty());
     }
 
@@ -229,11 +229,11 @@ mod tests {
         );
         assert_eq!(
             matching_commands(&previewing, "edit source")[0].id,
-            notebook_menu::TOGGLE_PREVIEW
+            native::TOGGLE_PREVIEW
         );
         assert_eq!(
             matching_commands(&previewing, "save page")[0].id,
-            notebook_menu::SAVE
+            native::SAVE
         );
         assert_eq!(
             matching_commands(&previewing, "go back")[0].id,
@@ -248,17 +248,12 @@ mod tests {
 
         let mut mode = Edit;
         for (query, target, shortcut, expected) in [
-            (
-                "show preview",
-                notebook_menu::TOGGLE_PREVIEW,
-                "⇧⌘P",
-                Preview,
-            ),
-            ("edit source", notebook_menu::TOGGLE_PREVIEW, "⇧⌘P", Edit),
-            ("open side by side", notebook_menu::TOGGLE_SPLIT, "", Split),
-            ("edit source", notebook_menu::TOGGLE_PREVIEW, "⇧⌘P", Edit),
-            ("split view", notebook_menu::TOGGLE_SPLIT, "", Split),
-            ("close side by side", notebook_menu::TOGGLE_SPLIT, "", Edit),
+            ("show preview", native::TOGGLE_PREVIEW, "⇧⌘P", Preview),
+            ("edit source", native::TOGGLE_PREVIEW, "⇧⌘P", Edit),
+            ("open side by side", native::TOGGLE_SPLIT, "", Split),
+            ("edit source", native::TOGGLE_PREVIEW, "⇧⌘P", Edit),
+            ("split view", native::TOGGLE_SPLIT, "", Split),
+            ("close side by side", native::TOGGLE_SPLIT, "", Edit),
         ] {
             let options = commands::notebook_commands(
                 true,
@@ -273,8 +268,8 @@ mod tests {
             assert_eq!(choices[0].id, target);
             assert_eq!(choices[0].shortcut, shortcut);
             mode = match target {
-                notebook_menu::TOGGLE_PREVIEW => mode.toggle_preview(),
-                notebook_menu::TOGGLE_SPLIT => mode.toggle_split(),
+                native::TOGGLE_PREVIEW => mode.toggle_preview(),
+                native::TOGGLE_SPLIT => mode.toggle_split(),
                 _ => unreachable!(),
             };
             assert!(mode == expected, "{query}");
@@ -283,13 +278,13 @@ mod tests {
 
     #[test]
     fn searches_settings_and_marks_the_active_values() {
-        use crate::{page_width::PageWidth, theme::Appearance};
+        use crate::settings::{page_width::PageWidth, theme::Appearance};
 
         let settings: Vec<_> =
             commands::settings(Appearance::Dark, PageWidth::Wide, false).collect();
         let dark = matching_commands(&settings, "appearance dark")[0];
         assert!(dark.current);
-        assert!(crate::theme::appearance_for_id(dark.id) == Some(Appearance::Dark));
+        assert!(crate::settings::theme::appearance_for_id(dark.id) == Some(Appearance::Dark));
         let wide = matching_commands(&settings, "editor wide")[0];
         assert!(wide.current);
         assert!(commands::width_for_id(wide.id) == Some(PageWidth::Wide));
@@ -302,10 +297,10 @@ mod tests {
 
     #[test]
     fn finds_writing_settings_by_name_and_value() {
-        use crate::{font_size::FontPreference, writing_style::WritingStyle};
+        use crate::settings::{font_size::FontPreference, writing_style::WritingStyle};
 
         let mut settings: Vec<_> =
-            crate::writing_style::style_commands(WritingStyle::load()).collect();
+            crate::settings::writing_style::style_commands(WritingStyle::load()).collect();
         settings.extend(FontPreference::Settings.commands(15));
         settings.extend(FontPreference::Markdown.commands(18));
 
@@ -366,7 +361,7 @@ mod tests {
 
     #[test]
     fn preview_editing_command_reflects_current_state() {
-        use crate::{page_width::PageWidth, theme::Appearance};
+        use crate::settings::{page_width::PageWidth, theme::Appearance};
 
         for (enabled, label) in [
             (false, "Enable Editing in Preview"),
@@ -376,7 +371,7 @@ mod tests {
                 commands::settings(Appearance::System, PageWidth::Standard, enabled).collect();
             let matching = matching_commands(&settings, "edit in preview");
             assert_eq!(matching.len(), 1);
-            assert_eq!(matching[0].id, notebook_menu::TOGGLE_PREVIEW_EDITING);
+            assert_eq!(matching[0].id, native::TOGGLE_PREVIEW_EDITING);
             assert_eq!(matching[0].label, label);
         }
     }
