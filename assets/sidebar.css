@@ -85,9 +85,10 @@
 
 .workspace .notebook-sidebar .sidebar-entry {
     display: grid;
-    grid-template-columns: 42px 15px minmax(0, 1fr);
-    align-items: start;
-    gap: 8px;
+    grid-template-columns: 52px 15px minmax(0, 1fr);
+    align-items: center;
+    align-content: start;
+    gap: 2px 8px;
     width: 100%;
     min-height: 61px;
     padding: 8px 11px;
@@ -98,7 +99,7 @@
 }
 
 .workspace .notebook-sidebar .sidebar-folder {
-    align-items: center;
+    align-content: center;
     min-height: 32px;
     padding-block: 4px;
 }
@@ -110,21 +111,17 @@
 
 .sidebar-date,
 .sidebar-entry-icon,
-.sidebar-entry-text {
+.sidebar-entry-name {
     grid-row: 1;
 }
 
 .sidebar-date {
     grid-column: 1;
-    margin-top: 1px;
     color: #626262;
     font-size: 10px;
+    font-variant-numeric: tabular-nums;
     line-height: 1.35;
     white-space: nowrap;
-}
-
-.sidebar-date span {
-    display: block;
 }
 
 .sidebar-entry-icon {
@@ -132,13 +129,9 @@
     opacity: .75;
 }
 
-.sidebar-entry-text {
+.sidebar-entry-name {
     grid-column: 3;
     min-width: 0;
-}
-
-.sidebar-entry-name {
-    display: block;
     overflow: hidden;
     font-size: 12px;
     line-height: 1.35;
@@ -147,6 +140,7 @@
 }
 
 .sidebar-excerpt {
+    grid-area: 2 / 3;
     display: -webkit-box;
     overflow: hidden;
     color: #626262;
@@ -157,8 +151,8 @@
     -webkit-line-clamp: 2;
 }
 
-.sidebar-excerpt:not(:empty) {
-    margin-top: 2px;
+.sidebar-excerpt:empty {
+    display: none;
 }
 
 .sidebar-status {

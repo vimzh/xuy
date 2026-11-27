@@ -116,7 +116,11 @@ pub(crate) fn WorkspaceSidebar(
                     {ordered.into_iter().map(|entry| {
                         let active = selected.as_ref() == Some(&entry.path);
                         let note = folder_details.and_then(|details| details.get(&entry.path));
-                        let name = entry.path.file_name().unwrap_or(entry.path.as_os_str()).to_string_lossy();
+                        let name = if entry.is_dir {
+                            entry.path.file_name()
+                        } else {
+                            entry.path.file_stem()
+                        }.unwrap_or(entry.path.as_os_str()).to_string_lossy();
                         let icon = if entry.is_dir {
                             asset!("/assets/hugeicons/folder-01.svg")
                         } else {
@@ -129,7 +133,7 @@ pub(crate) fn WorkspaceSidebar(
                                     r#type: "button",
                                     disabled: busy,
                                     aria_current: active.then_some("true"),
-                                    title: "{entry.path.display()}",
+                                    title: "{name}",
                                     onclick: { let entry = entry.clone(); move |_| on_browse.call(entry.clone()) },
                                     if let Some(note) = note {
                                         if let Some(date) = note.as_ref().ok().and_then(|(_, date)| *date) {
@@ -138,22 +142,19 @@ pub(crate) fn WorkspaceSidebar(
                                                 datetime: "{date}",
                                                 title: "Modified {date}",
                                                 "{date_label(date)}"
-                                                span { "{date.year()}" }
                                             }
                                         } else {
                                             span { class: "sidebar-date", title: "Modified date unavailable", "—" }
                                         }
                                     }
                                     img { class: "sidebar-entry-icon", src: icon, alt: "" }
-                                    span { class: "sidebar-entry-text",
-                                        span { class: "sidebar-entry-name", "{name}" }
-                                        if let Some(note) = note {
-                                            match note.as_ref().and_then(|(note, _)| {
-                                                note.preview.as_deref()
-                                            }) {
-                                                Ok(preview) => rsx! { span { class: "sidebar-excerpt", "{preview}" } },
-                                                Err(error) => rsx! { span { class: "sidebar-excerpt", title: "{error}", "Preview unavailable" } },
-                                            }
+                                    span { class: "sidebar-entry-name", "{name}" }
+                                    if let Some(note) = note {
+                                        match note.as_ref().and_then(|(note, _)| {
+                                            note.preview.as_deref()
+                                        }) {
+                                            Ok(preview) => rsx! { span { class: "sidebar-excerpt", "{preview}" } },
+                                            Err(error) => rsx! { span { class: "sidebar-excerpt", title: "{error}", "Preview unavailable" } },
                                         }
                                     }
                                 }
@@ -188,7 +189,12 @@ fn local_date(modified: SystemTime) -> Option<Date> {
 }
 
 fn date_label(date: Date) -> String {
-    format!("{:.3} {}", date.month(), date.day())
+    format!(
+        "{:02}/{:02}/{:02}",
+        date.day(),
+        u8::from(date.month()),
+        date.year().rem_euclid(100)
+    )
 }
 
 #[cfg(test)]
