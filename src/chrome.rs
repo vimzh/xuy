@@ -104,6 +104,7 @@ pub(crate) fn NotebookChrome(
                     }
                     div { class: "chrome-right", role: "group", aria_label: "Writing controls",
                         div { class: "chrome-width",
+                            img { src: "{icons}/arrow-horizontal.svg", alt: "", width: "18", height: "18" }
                             PageWidthSelect {
                                 label: "Writing width",
                                 width: page_width(),
@@ -113,11 +114,12 @@ pub(crate) fn NotebookChrome(
                         button {
                             class: "chrome-preview",
                             r#type: "button",
+                            aria_label: "Preview",
                             aria_pressed: preview,
                             title: if preview { "Edit source" } else { "Show preview" },
                             disabled: !can_preview,
                             onclick: move |_| on_preview.call(()),
-                            "Preview"
+                            img { src: "{icons}/view.svg", alt: "", width: "18", height: "18" }
                         }
                     }
                 }

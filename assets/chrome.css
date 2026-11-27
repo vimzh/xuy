@@ -131,11 +131,13 @@
     background: transparent;
 }
 
-.workspace .notebook-chrome button:enabled:hover {
+.workspace .notebook-chrome button:enabled:hover,
+.chrome-width:hover {
     background: #f3f3f3;
 }
 
-.workspace .notebook-chrome :is(button, select):focus-visible {
+.workspace .notebook-chrome button:focus-visible,
+.chrome-width:has(select:focus-visible) {
     outline: 2px solid #666;
     outline-offset: -2px;
 }
@@ -151,52 +153,29 @@
     align-items: center;
     gap: 6px;
     margin-inline-end: 9px;
-    font-size: 11px;
 }
 
 .chrome-width {
     position: relative;
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 18px;
+    border-radius: 4px;
 }
 
+/* Keep the native select clickable and keyboard accessible over the width icon. */
 .chrome-width select {
-    appearance: none;
-    display: block;
-    height: 18px;
-    border: 0;
-    border-radius: 4px;
-    padding: 0 14px 0 4px;
-    background: transparent;
-    color: inherit;
-    font: inherit;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
     cursor: pointer;
 }
 
-.chrome-width select:hover {
-    background: #f3f3f3;
-}
-
-.chrome-width::after {
-    position: absolute;
-    top: 6px;
-    right: 5px;
-    width: 4px;
-    height: 4px;
-    border-right: 1px solid currentColor;
-    border-bottom: 1px solid currentColor;
-    transform: rotate(45deg);
-    pointer-events: none;
-    content: "";
-}
-
-.workspace .notebook-chrome .chrome-preview {
-    width: auto;
-    padding-inline: 4px;
-    font: inherit;
-}
-
-.chrome-preview[aria-pressed="true"] {
-    text-decoration: underline;
-    text-underline-offset: 2px;
+.workspace .notebook-chrome .chrome-preview[aria-pressed="true"] {
+    background: #ebebeb;
 }
 
 @media (max-width: 520px) {
@@ -212,7 +191,8 @@
         gap: 4px;
     }
 
-    .workspace .notebook-chrome button {
+    .workspace .notebook-chrome button,
+    .chrome-width {
         width: 22px;
     }
 }
