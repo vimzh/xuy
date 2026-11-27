@@ -16,7 +16,7 @@ Press `⌘K` to open the command bar from Home or while writing. Type to filter 
 
 Search for a setting such as **Writing Font**, **Line Spacing**, **Code Block Theme**, or **Cursor Shape** to change it directly. The current choices have checkmarks. With a page open, use **Show Preview**, **Edit Source**, or **Open Side by Side**. **Save Page** appears when the page has unsaved edits, and **Previous Page** and **Next Page** appear when there is page history in that direction.
 
-Drag the divider between the left sidebar and editor to change the sidebar width. With the divider focused, use the left and right arrow keys to resize it, or use `Home` and `End` for its width limits. In a narrow window, the file list moves above the editor. Use the sidebar buttons on either end of the title bar to show or hide each sidebar. xuy remembers the sidebar width and which sidebars are open.
+Drag the divider between the editor and either sidebar to change its width. With a divider focused, use the left and right arrow keys to move it, or use `Home` and `End` to set the minimum or maximum width. In narrow windows, the sidebars stack above the editor. Use the sidebar buttons on either end of the title bar to show or hide each sidebar. xuy remembers both widths and which sidebars are open.
 
 ## Create, edit, and save a note
 

@@ -21,7 +21,7 @@ use tokio::{
 use self::chrome::NotebookChrome;
 use self::external_edit::{Conflict, ExternalEditNotice, Revision};
 use self::history::NoteHistory;
-use self::sidebar::{SidebarDivider, WorkspaceSidebar};
+use self::sidebar::WorkspaceSidebar;
 use self::terminal::TerminalPanel;
 use crate::app::performance::PerformancePanel;
 use crate::commands::{self, PageActions, native};
@@ -38,6 +38,7 @@ use crate::settings::writing_style::WritingStyle;
 use crate::ui::{Button, ButtonKind};
 
 pub(crate) use open::{OpenNotebook, pick_notebook};
+pub(crate) use sidebar::SidebarDivider;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum NewEntry {

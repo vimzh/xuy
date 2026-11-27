@@ -1,13 +1,20 @@
 .writing-sidebar {
     grid-area: tools;
+    position: relative;
+    box-sizing: border-box;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     min-height: 0;
-    min-width: 0;
+    min-width: var(--writing-sidebar-min-width);
+    max-width: var(--writing-sidebar-max-width);
     padding: 5px 6px;
     border-inline-start: 1px solid var(--workspace-rule);
     background: var(--sidebar-surface);
     font-size: 12px;
+}
+
+#writing-sidebar-divider {
+    inset-inline-start: -7px;
 }
 
 .writing-sidebar[hidden] {
@@ -160,8 +167,14 @@
 
 @media (max-width: 720px) {
     .writing-sidebar {
+        min-width: 0;
+        max-width: none;
         border-inline-start: 0;
         border-block-end: 1px solid var(--workspace-rule);
+    }
+
+    #writing-sidebar-divider {
+        display: none;
     }
 
     .writing-tools-view {

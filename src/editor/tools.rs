@@ -6,6 +6,7 @@ use dioxus::prelude::*;
 
 use super::{highlight::Color, status::NoteSummary};
 use crate::ui::Button;
+use crate::workspace::SidebarDivider;
 
 #[component]
 pub(crate) fn WritingSidebar(
@@ -21,6 +22,7 @@ pub(crate) fn WritingSidebar(
     let mut show_highlights = use_signal(|| false);
     rsx! {
         aside { id: "writing-sidebar", class: "writing-sidebar", aria_label: "Note tools", hidden: !open,
+            SidebarDivider { right: true }
             div { class: "writing-modes", role: "group", aria_label: "Note tools view",
                 Button { aria_pressed: !show_highlights(),
                     aria_controls: "writing-tools-view", onclick: move |_| show_highlights.set(false), "Outline" }

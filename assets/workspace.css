@@ -6,7 +6,10 @@
     --sidebar-track: var(--sidebar-width);
     --sidebar-motion: 260ms cubic-bezier(.22, .8, .2, 1);
     /* The title bar and note tools use the same column width. */
-    --writing-sidebar-width: clamp(11rem, 18vw, 13rem);
+    --writing-sidebar-min-width: 11rem;
+    --writing-sidebar-max-width: min(480px, 35vw, max(var(--writing-sidebar-min-width), 100vw - var(--sidebar-track) - 18rem));
+    --writing-sidebar-default-width: clamp(11rem, 18vw, 13rem);
+    --writing-sidebar-width: clamp(var(--writing-sidebar-min-width), var(--writing-sidebar-preferred-width, var(--writing-sidebar-default-width)), var(--writing-sidebar-max-width));
     --writing-sidebar-track: 0px;
     position: fixed;
     inset: 0;
@@ -90,7 +93,6 @@
 .workspace-sidebar-divider {
     position: absolute;
     z-index: 1;
-    grid-area: 1 / 2;
     inset-block: 0;
     inset-inline-start: -6px;
     width: 12px;
@@ -98,13 +100,16 @@
     touch-action: none;
 }
 
+.workspace-body > .workspace-sidebar-divider {
+    grid-area: 1 / 2;
+}
+
 .workspace-sidebar-divider:focus-visible {
     outline: 1px solid var(--focus);
     outline-offset: -1px;
 }
 
-.workspace-sidebar-divider:hover::before,
-.workspace[data-sidebar-resizing] .workspace-sidebar-divider::before {
+.workspace-sidebar-divider:is(:hover, [data-resizing])::before {
     content: "";
     position: absolute;
     inset-block: 0;
@@ -113,7 +118,7 @@
     background: var(--focus);
 }
 
-.workspace[data-sidebar-open="false"] .workspace-sidebar-divider {
+.workspace[data-sidebar-open="false"] #workspace-sidebar-divider {
     display: none;
 }
 

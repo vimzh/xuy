@@ -137,7 +137,20 @@ fn SidebarContextMenu(on_action: EventHandler<&'static str>) -> Element {
 }
 
 #[component]
-pub(crate) fn SidebarDivider() -> Element {
+pub(crate) fn SidebarDivider(#[props(default)] right: bool) -> Element {
+    let (id, label, controls) = if right {
+        (
+            "writing-sidebar-divider",
+            "Resize right sidebar",
+            "writing-sidebar",
+        )
+    } else {
+        (
+            "workspace-sidebar-divider",
+            "Resize notebook sidebar",
+            "workspace-sidebar",
+        )
+    };
     let mut bridge = use_signal(|| None::<document::Eval>);
     use_drop(move || {
         if let Some(bridge) = *bridge.peek() {
@@ -147,15 +160,19 @@ pub(crate) fn SidebarDivider() -> Element {
 
     rsx! {
         div {
-            id: "workspace-sidebar-divider",
+            id,
             class: "workspace-sidebar-divider",
             role: "separator",
             tabindex: "0",
-            aria_label: "Resize notebook sidebar",
+            aria_label: label,
             aria_orientation: "vertical",
-            aria_controls: "workspace-sidebar",
+            aria_controls: controls,
             onmounted: move |_| async move {
                 let resize = document::eval(include_str!("sidebar_resize.js"));
+                if let Err(error) = resize.send(right) {
+                    eprintln!("Could not configure sidebar resizing: {error}");
+                    return;
+                }
                 bridge.set(Some(resize));
                 if let Err(error) = resize.join::<()>().await {
                     eprintln!("Could not initialize sidebar resizing: {error}");

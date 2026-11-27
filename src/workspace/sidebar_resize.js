@@ -1,11 +1,14 @@
 // Keep pointer movement in WebKit so resizing never rerenders the note.
-const divider = document.getElementById("workspace-sidebar-divider");
-const sidebar = document.getElementById("workspace-sidebar");
-const pane = sidebar.firstElementChild;
+const right = await dioxus.recv();
+const divider = document.getElementById(right ? "writing-sidebar-divider" : "workspace-sidebar-divider");
+const sidebar = document.getElementById(divider.getAttribute("aria-controls"));
+const pane = right ? sidebar : sidebar.firstElementChild;
 const workspace = sidebar.closest(".workspace");
 const listeners = new AbortController();
 const options = { signal: listeners.signal };
-const widthKey = "xuy.sidebar-width";
+const preference = right ? "writing-sidebar" : "sidebar";
+const widthKey = `xuy.${preference}-width`;
+const direction = right ? -1 : 1;
 let drag;
 let minimum;
 let maximum;
@@ -16,7 +19,7 @@ function applyWidth(width) {
     if (preferredWidth === width) return;
     preferredWidth = width;
     // Keep the user preference separate from the workspace's reactive inline styles.
-    document.documentElement.style.setProperty(`--sidebar-preferred-width`, `${width}px`);
+    document.documentElement.style.setProperty(`--${preference}-preferred-width`, `${width}px`);
 }
 
 try {
@@ -52,44 +55,50 @@ function syncRange() {
     const { minWidth, maxWidth } = getComputedStyle(pane);
     minimum = parseFloat(minWidth);
     maximum = parseFloat(maxWidth);
-    if (!Number.isFinite(maximum)) return;
+    if (!Number.isFinite(maximum)) return false;
     const width = pane.offsetWidth;
     divider.setAttribute("aria-valuemin", minimum);
     divider.setAttribute("aria-valuemax", Math.round(maximum));
     divider.setAttribute("aria-valuenow", width);
     divider.setAttribute("aria-valuetext", `${width} pixels`);
+    return true;
+}
+
+function setResizing(active) {
+    divider.toggleAttribute("data-resizing", active);
+    if (!right) workspace.toggleAttribute("data-sidebar-resizing", active);
 }
 
 divider.addEventListener("pointerdown", (event) => {
-    if (!event.isPrimary || event.button !== 0 || drag) return;
+    if (!event.isPrimary || event.button !== 0 || drag || !syncRange()) return;
     event.preventDefault();
-    drag = { pointerId: event.pointerId, offset: event.clientX - sidebar.offsetWidth };
+    drag = { pointerId: event.pointerId, x: event.clientX, width: sidebar.offsetWidth };
     divider.setPointerCapture(event.pointerId);
-    workspace.setAttribute("data-sidebar-resizing", "");
+    setResizing(true);
 }, options);
 
 divider.addEventListener("pointermove", (event) => {
     if (event.pointerId !== drag?.pointerId) return;
-    if (workspace.dataset.sidebarOpen === "false") {
+    if (workspace.getAttribute(`data-${preference}-open`) === "false") {
         divider.releasePointerCapture(event.pointerId);
         return;
     }
-    resizeTo(event.clientX - drag.offset);
+    resizeTo(drag.width + (event.clientX - drag.x) * direction);
 }, options);
 
 divider.addEventListener("lostpointercapture", (event) => {
     if (event.pointerId !== drag?.pointerId) return;
     drag = undefined;
-    workspace.removeAttribute("data-sidebar-resizing");
+    setResizing(false);
     saveWidth();
 }, options);
 
 divider.addEventListener("keydown", (event) => {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !syncRange()) return;
     let width;
     switch (event.key) {
-        case "ArrowLeft": width = pane.offsetWidth - 16; break;
-        case "ArrowRight": width = pane.offsetWidth + 16; break;
+        case "ArrowLeft": width = pane.offsetWidth - 16 * direction; break;
+        case "ArrowRight": width = pane.offsetWidth + 16 * direction; break;
         case "Home": width = minimum; break;
         case "End": width = maximum; break;
         default: return;
@@ -102,9 +111,11 @@ divider.addEventListener("keydown", (event) => {
 const observer = new ResizeObserver(syncRange);
 observer.observe(pane);
 observer.observe(workspace);
+if (right) observer.observe(sidebar.parentElement);
 try {
     await dioxus.recv();
 } finally {
     observer.disconnect();
     listeners.abort();
+    if (drag) setResizing(false);
 }
