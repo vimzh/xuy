@@ -6,10 +6,13 @@
     --chrome-history-gap: 2px;
     --chrome-left-controls: calc(var(--chrome-left-inset) + 4 * var(--chrome-control-size) + 2 * var(--chrome-gap) + var(--chrome-history-gap));
     --chrome-right-min: calc(2 * var(--chrome-control-size) + 15px);
-    /* At narrow widths, share the space left by the controls between the two names. */
-    --chrome-folder-space: min(3rem, (100% - var(--chrome-left-controls) - var(--chrome-right-min)) / 2);
-    --chrome-side: clamp(var(--chrome-left-controls), max(28vw, calc(var(--chrome-left-controls) + var(--chrome-folder-space))), 19rem);
-    --chrome-right-side: clamp(var(--chrome-right-min), calc(100% - var(--chrome-side) - 4rem), var(--chrome-side));
+    --chrome-free-space: calc(100vw - var(--chrome-left-controls) - var(--chrome-right-min));
+    --chrome-title-gap: clamp(0px, (var(--chrome-free-space) - 1.5rem) / 2, 6px);
+    /* Reserve some folder space before sizing the filename. */
+    --chrome-label-space: calc(var(--chrome-free-space) - 2 * var(--chrome-title-gap));
+    --chrome-folder-space: clamp(0px, var(--chrome-label-space) / 2, 5.25rem);
+    --chrome-left-min: calc(var(--chrome-left-controls) + var(--chrome-folder-space));
+    --chrome-filename-max: clamp(0px, var(--chrome-label-space) - var(--chrome-folder-space), 50vw);
     position: relative;
     /* The native traffic lights are centered 16px from the top. */
     padding-block: max(4px, calc(16px / var(--ui-zoom, 1) - var(--chrome-control-size) / 2));
@@ -43,7 +46,9 @@
 
 .chrome-strip {
     display: grid;
-    grid-template-columns: minmax(0, var(--chrome-side)) minmax(0, 1fr) minmax(0, var(--chrome-right-side));
+    /* A short filename leaves more room for the folder while staying centered when it fits. */
+    grid-template-columns: minmax(var(--chrome-left-min), 1fr) auto minmax(var(--chrome-right-min), 1fr);
+    column-gap: var(--chrome-title-gap);
     align-items: center;
     height: var(--chrome-control-size);
 }
@@ -61,6 +66,10 @@
     background: var(--workspace-rule);
     pointer-events: none;
     transition: left var(--sidebar-motion);
+}
+
+.chrome-drag + .chrome-sidebar-rule {
+    display: none;
 }
 
 .chrome-left,
@@ -108,6 +117,7 @@
     align-items: center;
     justify-content: center;
     height: 1em;
+    max-width: var(--chrome-filename-max);
     color: var(--ink);
     line-height: 1;
     pointer-events: none;
@@ -122,7 +132,7 @@
 }
 
 .chrome-filename-text[data-dirty="true"] {
-    padding-inline: min(9px, 50%);
+    padding-inline: min(9px, var(--chrome-filename-max) / 2);
 }
 
 .chrome-filename-text[data-dirty="true"]::after {
