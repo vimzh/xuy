@@ -3,12 +3,16 @@
 use std::cell::RefCell;
 
 use dioxus::desktop::muda::accelerator::{Accelerator, Code, Modifiers};
-use dioxus::desktop::muda::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use dioxus::desktop::muda::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
+
+use crate::editor::ViewMode;
 
 pub(crate) const HOME: &str = "xuy-home";
 pub(crate) const COMMAND_BAR: &str = "xuy-command-bar";
 pub(crate) const TOGGLE_SIDEBAR: &str = "xuy-toggle-sidebar";
 pub(crate) const TOGGLE_PREVIEW: &str = "xuy-toggle-preview";
+pub(crate) const TOGGLE_SPLIT: &str = "xuy-toggle-split";
+pub(crate) const PREVIEW_SHORTCUT: &str = "⇧⌘P";
 pub(crate) const SAVE: &str = "xuy-save";
 
 pub(crate) const NEW_NOTE: &str = "xuy-new-note";
@@ -36,6 +40,7 @@ struct Commands {
     home: MenuItem,
     toggle_sidebar: MenuItem,
     toggle_preview: MenuItem,
+    toggle_split: CheckMenuItem,
     save: MenuItem,
 }
 
@@ -91,7 +96,6 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
         false,
         Some(Accelerator::new(Some(Modifiers::SUPER), Code::KeyB)),
     );
-    let toggle_preview = MenuItem::with_id(TOGGLE_PREVIEW, "Edit Source", false, None);
     let command = |id, text, enabled, modifiers, key| {
         MenuItem::with_id(
             id,
@@ -100,6 +104,14 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
             Some(Accelerator::new(Some(modifiers), key)),
         )
     };
+    let toggle_preview = command(
+        TOGGLE_PREVIEW,
+        ViewMode::Edit.preview_action(),
+        false,
+        Modifiers::SUPER | Modifiers::SHIFT,
+        Code::KeyP,
+    );
+    let toggle_split = CheckMenuItem::with_id(TOGGLE_SPLIT, "Side by Side", false, false, None);
     let new_note = command(NEW_NOTE, "New Note…", true, Modifiers::SUPER, Code::KeyN);
     let new_folder = command(
         NEW_FOLDER,
@@ -137,6 +149,7 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
             &home,
             &toggle_sidebar,
             &toggle_preview,
+            &toggle_split,
             &save,
         ],
     )
@@ -173,24 +186,25 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
         home,
         toggle_sidebar,
         toggle_preview,
+        toggle_split,
         save,
     }));
     menu
 }
 
-pub(crate) fn update(open: bool, has_note: bool, preview: bool, dirty: bool, busy: bool) {
+pub(crate) fn update(open: bool, can_view: bool, view_mode: ViewMode, dirty: bool, busy: bool) {
     COMMANDS.with_borrow(|commands| {
         if let Some(commands) = commands {
             commands.new_note.set_enabled(!busy);
             commands.new_folder.set_enabled(open && !busy);
             commands.home.set_enabled(open && !busy);
             commands.toggle_sidebar.set_enabled(open);
-            commands.toggle_preview.set_enabled(has_note && !busy);
-            commands.toggle_preview.set_text(if preview {
-                "Edit Source"
-            } else {
-                "Show Preview"
-            });
+            commands.toggle_preview.set_enabled(can_view);
+            commands.toggle_preview.set_text(view_mode.preview_action());
+            commands.toggle_split.set_enabled(can_view);
+            commands
+                .toggle_split
+                .set_checked(view_mode == ViewMode::Split);
             commands.save.set_enabled(dirty && !busy);
         }
     });

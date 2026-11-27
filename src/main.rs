@@ -191,6 +191,7 @@ fn App() -> Element {
                     | notebook_menu::HOME
                     | notebook_menu::TOGGLE_SIDEBAR
                     | notebook_menu::TOGGLE_PREVIEW
+                    | notebook_menu::TOGGLE_SPLIT
                     | notebook_menu::SAVE
                     | commands::PREVIOUS_PAGE
                     | commands::NEXT_PAGE

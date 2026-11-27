@@ -1,6 +1,8 @@
 //! Available command bar actions and their current settings.
 
-use crate::{command_bar::Command, notebook_menu, page_width::PageWidth, theme::Appearance};
+use crate::{
+    command_bar::Command, editor::ViewMode, notebook_menu, page_width::PageWidth, theme::Appearance,
+};
 
 pub(crate) const PREVIOUS_PAGE: &str = "previous-page";
 pub(crate) const NEXT_PAGE: &str = "next-page";
@@ -21,7 +23,7 @@ const WIDTHS: [(PageWidth, &str, &str); 3] = [
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct PageActions {
     pub(crate) has_page: bool,
-    pub(crate) preview: bool,
+    pub(crate) view_mode: ViewMode,
     pub(crate) dirty: bool,
     pub(crate) can_back: bool,
     pub(crate) can_forward: bool,
@@ -72,17 +74,23 @@ pub(crate) fn notebook_commands(in_notebook: bool, page: PageActions) -> Vec<Com
             ),
         ]);
         if page.has_page {
-            let label = if page.preview {
-                "Edit Source"
-            } else {
-                "Show Preview"
-            };
             commands.push(Command::new(
                 TOGGLE_PREVIEW,
-                label,
+                page.view_mode.preview_action(),
                 "view",
+                PREVIEW_SHORTCUT,
+                "page markdown rendered raw toggle edit",
+            ));
+            commands.push(Command::new(
+                TOGGLE_SPLIT,
+                if page.view_mode == ViewMode::Split {
+                    "Close Side by Side"
+                } else {
+                    "Open Side by Side"
+                },
+                "sidebar-left",
                 "",
-                "page markdown preview edit",
+                "split view markdown preview editor",
             ));
         }
         if page.has_page && page.dirty {

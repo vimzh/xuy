@@ -175,7 +175,7 @@ pub(crate) fn CommandBar(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{commands, notebook_menu};
+    use crate::{commands, editor::ViewMode, notebook_menu};
 
     #[test]
     fn filters_by_words_and_aliases_in_the_current_workspace() {
@@ -197,13 +197,14 @@ mod tests {
     fn exposes_only_page_actions_that_can_run() {
         let blank_notebook = commands::notebook_commands(true, commands::PageActions::default());
         assert!(matching_commands(&blank_notebook, "preview").is_empty());
+        assert!(matching_commands(&blank_notebook, "side by side").is_empty());
         assert!(matching_commands(&blank_notebook, "save page").is_empty());
 
         let previewing = commands::notebook_commands(
             true,
             commands::PageActions {
                 has_page: true,
-                preview: true,
+                view_mode: ViewMode::Preview,
                 dirty: true,
                 can_back: true,
                 can_forward: false,
@@ -222,6 +223,45 @@ mod tests {
             commands::PREVIOUS_PAGE
         );
         assert!(matching_commands(&previewing, "next page").is_empty());
+    }
+
+    #[test]
+    fn switches_between_the_three_note_views_from_the_palette() {
+        use ViewMode::{Edit, Preview, Split};
+
+        let mut mode = Edit;
+        for (query, target, shortcut, expected) in [
+            (
+                "show preview",
+                notebook_menu::TOGGLE_PREVIEW,
+                "⇧⌘P",
+                Preview,
+            ),
+            ("edit source", notebook_menu::TOGGLE_PREVIEW, "⇧⌘P", Edit),
+            ("open side by side", notebook_menu::TOGGLE_SPLIT, "", Split),
+            ("edit source", notebook_menu::TOGGLE_PREVIEW, "⇧⌘P", Edit),
+            ("split view", notebook_menu::TOGGLE_SPLIT, "", Split),
+            ("close side by side", notebook_menu::TOGGLE_SPLIT, "", Edit),
+        ] {
+            let options = commands::notebook_commands(
+                true,
+                commands::PageActions {
+                    has_page: true,
+                    view_mode: mode,
+                    ..Default::default()
+                },
+            );
+            let choices = matching_commands(&options, query);
+            assert_eq!(choices.len(), 1, "{query}");
+            assert_eq!(choices[0].id, target);
+            assert_eq!(choices[0].shortcut, shortcut);
+            mode = match target {
+                notebook_menu::TOGGLE_PREVIEW => mode.toggle_preview(),
+                notebook_menu::TOGGLE_SPLIT => mode.toggle_split(),
+                _ => unreachable!(),
+            };
+            assert!(mode == expected, "{query}");
+        }
     }
 
     #[test]

@@ -12,7 +12,7 @@ use tokio::{
 
 use crate::chrome::NotebookChrome;
 use crate::commands::{self, PageActions};
-use crate::editor::Editor;
+use crate::editor::{Editor, ViewMode};
 use crate::markdown_paths::MarkdownPaths;
 use crate::markdown_preview::PreviewTarget;
 use crate::note_history::NoteHistory;
@@ -56,7 +56,7 @@ pub(crate) fn Workspace(
     let mut last_edit = use_signal(|| None::<Instant>);
     let mut failed_edit = use_signal(|| None::<Instant>);
     let mut saving = use_signal(|| false);
-    let mut preview = use_signal(|| false);
+    let mut view_mode = use_signal(ViewMode::default);
     let mut preview_anchor = use_signal(|| None::<String>);
     let mut sidebar_open = use_signal(|| true);
     let mut chrome_hidden = use_signal(|| false);
@@ -89,7 +89,7 @@ pub(crate) fn Workspace(
         }
     };
 
-    let browse = move |entry: Entry, history_index: Option<usize>| async move {
+    let browse = move |entry: Entry, history_index: Option<usize>, mode: ViewMode| async move {
         if *busy.peek() || selected.peek().as_ref() == Some(&entry.path) {
             return;
         }
@@ -137,7 +137,7 @@ pub(crate) fn Workspace(
                     selected.set(Some(path));
                     remember_location.set(true);
                     preview_anchor.set(None);
-                    preview.set(false);
+                    view_mode.set(mode);
                     chrome_hidden.set(false);
                     naming.set(None);
                 }
@@ -148,7 +148,7 @@ pub(crate) fn Workspace(
     };
 
     let open_preview_link = move |(target, wiki): PreviewTarget| async move {
-        if *busy.peek() || *modal_open.peek() || !*preview.peek() {
+        if *busy.peek() || *modal_open.peek() || *view_mode.peek() == ViewMode::Edit {
             return;
         }
         let Some(origin) = selected.peek().clone() else {
@@ -156,7 +156,8 @@ pub(crate) fn Workspace(
         };
         let paths = MarkdownPaths::new(root.peek().clone(), origin.clone());
         let resolved = on_disk(move || paths.resolve_note(&target, wiki)).await;
-        if *busy.peek() || !*preview.peek() || selected.peek().as_ref() != Some(&origin) {
+        let mode = *view_mode.peek();
+        if *busy.peek() || mode == ViewMode::Edit || selected.peek().as_ref() != Some(&origin) {
             return;
         }
         match resolved {
@@ -168,6 +169,7 @@ pub(crate) fn Workspace(
                             is_dir: false,
                         },
                         None,
+                        mode,
                     )
                     .await;
                 }
@@ -181,7 +183,6 @@ pub(crate) fn Workspace(
                         }
                     });
                     preview_anchor.set(fragment);
-                    preview.set(true);
                 }
             }
             Err(failure) => error.set(Some(failure.to_string())),
@@ -200,6 +201,7 @@ pub(crate) fn Workspace(
                     is_dir: false,
                 },
                 Some(index),
+                ViewMode::Edit,
             )
             .await;
         }
@@ -244,7 +246,7 @@ pub(crate) fn Workspace(
                             selected.set(Some(path));
                             remember_location.set(true);
                             preview_anchor.set(None);
-                            preview.set(false);
+                            view_mode.set(ViewMode::Edit);
                         }
                         chrome_hidden.set(false);
                         naming.set(None);
@@ -339,11 +341,14 @@ pub(crate) fn Workspace(
             });
         }
     });
-    let mut toggle_preview = move |_| {
-        if !*busy.peek() && selected.peek().is_some() {
-            let next = !*preview.peek();
+    let mut change_view = move |mode| {
+        if (!*busy.peek() || *saving.peek())
+            && !*modal_open.peek()
+            && selected.peek().is_some()
+            && *view_mode.peek() != mode
+        {
             preview_anchor.set(None);
-            preview.set(next);
+            view_mode.set(mode);
             chrome_hidden.set(false);
         }
     };
@@ -368,7 +373,14 @@ pub(crate) fn Workspace(
             });
         }
         notebook_menu::TOGGLE_SIDEBAR => toggle_sidebar(()),
-        notebook_menu::TOGGLE_PREVIEW => toggle_preview(()),
+        notebook_menu::TOGGLE_PREVIEW => {
+            let next = view_mode.peek().toggle_preview();
+            change_view(next);
+        }
+        notebook_menu::TOGGLE_SPLIT => {
+            let next = view_mode.peek().toggle_split();
+            change_view(next);
+        }
         commands::PREVIOUS_PAGE => {
             spawn(move_history(-1));
         }
@@ -391,7 +403,7 @@ pub(crate) fn Workspace(
         let history = history.read();
         let actions = PageActions {
             has_page: selected.read().is_some(),
-            preview: preview(),
+            view_mode: view_mode(),
             dirty: dirty(),
             can_back: history.destination(-1).is_some(),
             can_forward: history.destination(1).is_some(),
@@ -401,13 +413,13 @@ pub(crate) fn Workspace(
         }
         notebook_menu::update(
             true,
-            actions.has_page,
-            actions.preview,
+            actions.has_page && (!busy() || saving()) && !modal_open(),
+            actions.view_mode,
             actions.dirty,
             busy(),
         );
     });
-    use_drop(|| notebook_menu::update(false, false, false, false, false));
+    use_drop(|| notebook_menu::update(false, false, ViewMode::Edit, false, false));
 
     let filename = match selected.read().as_ref() {
         Some(path) => display_name(path),
@@ -416,7 +428,7 @@ pub(crate) fn Workspace(
     };
     let can_back = !busy() && history.read().destination(-1).is_some();
     let can_forward = !busy() && history.read().destination(1).is_some();
-    let can_preview = !busy() && selected.read().is_some();
+    let can_preview = (!busy() || saving()) && !modal_open() && selected.read().is_some();
     let columns = page_width().columns();
     let folder = directory();
     let parent = folder
@@ -446,8 +458,8 @@ pub(crate) fn Workspace(
             NotebookChrome {
                 filename, dirty: dirty(), hidden: chrome_hidden, sidebar_open: sidebar_open(), can_back, can_forward,
                 folder, parent, busy: busy(),
-                on_parent: move |path| browse(Entry { path, is_dir: true }, None),
-                page_width, preview: preview(), can_preview, on_preview: toggle_preview,
+                on_parent: move |path| browse(Entry { path, is_dir: true }, None, ViewMode::Edit),
+                page_width, view_mode: view_mode(), can_preview, on_view_mode: change_view,
                 on_toggle: toggle_sidebar,
                 on_back: move |_| move_history(-1),
                 on_forward: move |_| move_history(1),
@@ -459,7 +471,7 @@ pub(crate) fn Workspace(
                         index,
                         selected: selected(),
                         busy: busy(),
-                        on_browse: move |entry| browse(entry, None),
+                        on_browse: move |entry| browse(entry, None, ViewMode::Edit),
                     },
                 }
                 SidebarDivider {}
@@ -497,7 +509,7 @@ pub(crate) fn Workspace(
                     }
                     if let Some(path) = selected() {
                         Editor { key: "{path:?}",
-                            draft, dirty, preview, chrome_hidden, busy: (busy() && !saving()) || modal_open(),
+                            draft, dirty, view_mode, chrome_hidden, busy: (busy() && !saving()) || modal_open(),
                             paths: MarkdownPaths::new(root.peek().clone(), path), preview_anchor,
                             on_preview_open: open_preview_link,
                             on_edit: move |text| {

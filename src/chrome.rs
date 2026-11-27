@@ -7,6 +7,7 @@ use dioxus::prelude::*;
 use dioxus_elements::input_data::MouseButton;
 
 use crate::dropdown::Dropdown;
+use crate::editor::ViewMode;
 use crate::page_width::{PageWidth, PageWidthSelect};
 
 #[component]
@@ -22,9 +23,9 @@ pub(crate) fn NotebookChrome(
     busy: bool,
     on_parent: EventHandler<PathBuf>,
     mut page_width: Signal<PageWidth>,
-    preview: bool,
+    view_mode: ViewMode,
     can_preview: bool,
-    on_preview: EventHandler<()>,
+    on_view_mode: EventHandler<ViewMode>,
     on_toggle: EventHandler<()>,
     on_back: EventHandler<()>,
     on_forward: EventHandler<()>,
@@ -113,18 +114,22 @@ pub(crate) fn NotebookChrome(
                                 on_change: move |width| page_width.set(width),
                             }
                         }
-                        Dropdown { icon: "{icons}/view.svg", active: preview,
+                        Dropdown { icon: "{icons}/view.svg", active: view_mode != ViewMode::Edit,
                             select {
                                 aria_label: "View mode",
                                 title: "View mode",
                                 disabled: !can_preview,
                                 onchange: move |event| {
-                                    if (event.value() == "preview") != preview {
-                                        on_preview.call(());
+                                    let selected = event.value();
+                                    if let Some((mode, _, _)) = ViewMode::OPTIONS
+                                        .into_iter().find(|&(_, value, _)| value == selected)
+                                    {
+                                        on_view_mode.call(mode);
                                     }
                                 },
-                                option { value: "edit", selected: !preview, "Edit" }
-                                option { value: "preview", selected: preview, "Preview" }
+                                for (mode, value, label) in ViewMode::OPTIONS {
+                                    option { key: "{value}", value, selected: view_mode == mode, "{label}" }
+                                }
                             }
                         }
                     }

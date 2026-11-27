@@ -138,6 +138,15 @@
     width: min(100%, var(--editor-page-width, 60ch));
 }
 
+.workspace-content > .note-editor[data-split="true"] {
+    --pane-gap: clamp(12px, 2vw, 32px);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+    gap: var(--pane-gap);
+    width: min(100%, calc(2 * var(--editor-page-width, 60ch) + var(--pane-gap)));
+}
+
 .workspace-message {
     color: var(--muted);
     font-size: 13px;
