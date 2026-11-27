@@ -10,7 +10,10 @@ use crate::markdown_preview::{MarkdownPreview, PreviewTarget};
 use crate::note_status::NoteSummary;
 use crate::writing_sidebar::WritingSidebar;
 
+mod format_menu;
 mod image_drop;
+
+use format_menu::FormatMenu;
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) enum ViewMode {
@@ -68,7 +71,8 @@ pub(crate) fn Editor(
     writing_sidebar_open: bool,
 ) -> Element {
     let tracker = use_signal(|| None::<document::Eval>);
-    let mut feedback = use_signal(|| None::<&'static str>);
+    let feedback = use_signal(|| None::<&'static str>);
+    let format_feedback = use_signal(|| None::<&'static str>);
     let mut applying_highlight = use_signal(|| false);
     let desktop = use_window();
     let mode = view_mode();
@@ -83,6 +87,19 @@ pub(crate) fn Editor(
             );
         }
     });
+    let mut highlight_selection = move |color, mut feedback: Signal<Option<&'static str>>| {
+        if *applying_highlight.peek() {
+            return;
+        }
+        applying_highlight.set(true);
+        feedback.set(None);
+        let desktop = desktop.clone();
+        spawn(async move {
+            feedback.set(apply_highlight(color, &desktop).await.err());
+            applying_highlight.set(false);
+        });
+    };
+    let mut menu_highlight = highlight_selection.clone();
     rsx! {
         document::Stylesheet { href: asset!("/assets/writing-sidebar.css") }
         div { class: "workspace-writing",
@@ -109,6 +126,13 @@ pub(crate) fn Editor(
                 MarkdownInput {
                     draft, chrome_hidden, busy, hidden: mode == ViewMode::Preview, cursor, tracker, on_edit, summary,
                     paths: paths.clone(),
+                    format_menu: rsx! {
+                        FormatMenu {
+                            highlighting: applying_highlight(),
+                            feedback: format_feedback,
+                            on_highlight: move |color| menu_highlight(Some(color), format_feedback),
+                        }
+                    },
                 }
                 if mode != ViewMode::Edit {
                     MarkdownPreview {
@@ -140,17 +164,7 @@ pub(crate) fn Editor(
                     let _ = tracker.send(offset);
                 }
             },
-            on_highlight: move |color| {
-                if *applying_highlight.peek() {
-                    return;
-                }
-                applying_highlight.set(true);
-                let desktop = desktop.clone();
-                spawn(async move {
-                    feedback.set(apply_highlight(color, &desktop).await.err());
-                    applying_highlight.set(false);
-                });
-            },
+            on_highlight: move |color| highlight_selection(color, feedback),
         }
     }
 }
@@ -166,6 +180,7 @@ fn MarkdownInput(
     on_edit: EventHandler<String>,
     summary: Memo<NoteSummary>,
     paths: MarkdownPaths,
+    format_menu: Element,
 ) -> Element {
     use_drop(move || {
         if let Some(tracker) = tracker.write().take() {
@@ -194,7 +209,7 @@ fn MarkdownInput(
                 id: "note-source",
                 class: "note-input",
                 aria_label: "Markdown source",
-                aria_keyshortcuts: "Meta+S",
+                aria_keyshortcuts: "Meta+S Shift+F10",
                 readonly: busy,
                 value: "{draft}",
                 onmounted: move |_| tracker.set(Some(document::eval(include_str!("editor_caret.js")))),
@@ -235,6 +250,7 @@ fn MarkdownInput(
             div { class: "note-caret-layer", aria_hidden: true,
                 span { class: "note-custom-caret", hidden: true }
             }
+            {format_menu}
             if let Some(error) = image_error() {
                 p { class: "workspace-error", role: "alert", "{error}" }
             }

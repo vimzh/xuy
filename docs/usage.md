@@ -28,6 +28,8 @@ To make a subfolder, press `⇧⌘N` or choose **Notebook > New Folder…**, ent
 
 You can also right-click the sidebar, or press `⇧F10` with it focused, and choose **New Page…** or **New Folder…**. Both create an item in the folder currently open in the sidebar.
 
+In Edit or Side by Side, select text and right-click it, or press `⇧F10` with the selection active. Choose **Bold**, **Italic**, **Strikethrough**, or a highlight color.
+
 In Edit or Side by Side, use **Insert Code Block** in `⌘K` to add a fenced Markdown block at the cursor or wrap selected text. Add a language name such as `rust` or `python` after the opening backticks for syntax highlighting in Preview. Set **Code Block Theme** to **System**, **Paper**, or **Graphite** in Settings or `⌘K`.
 
 The title bar and filename hide when you type, and the text stays in place. Move focus out of the editor, press `Esc`, or move the pointer to the top of the window to bring the title bar back. If you switch notes or return home with unsaved edits, **Keep editing** returns you to your draft. **Discard changes** continues without saving it.
