@@ -191,7 +191,7 @@ impl Default for CursorOptions {
         Self {
             shape: CursorShape::Bar,
             blink: true,
-            smooth: false,
+            smooth: true,
             blink_style: BlinkStyle::Sharp,
             color: None,
         }
@@ -378,18 +378,18 @@ mod tests {
     fn restores_both_old_and_current_preferences() {
         let old = CursorOptions::restore(("block".into(), false, None)).unwrap();
         assert_eq!(old.shape.id(), "block");
-        assert!(!old.blink && !old.smooth);
+        assert!(!old.blink && old.smooth);
         assert_eq!(old.blink_style.id(), "sharp");
         assert_eq!(old.color(), "currentColor");
 
         let current = CursorOptions::restore((
             "underline".into(),
             true,
-            Some((true, Some("#45AB03".into()), "fade".into())),
+            Some((false, Some("#45AB03".into()), "fade".into())),
         ))
         .unwrap();
         assert!(current.shape == CursorShape::Underline && current.blink_style == BlinkStyle::Fade);
-        assert!(current.blink && current.smooth);
+        assert!(current.blink && !current.smooth);
         assert_eq!(current.color(), "#45ab03");
     }
 

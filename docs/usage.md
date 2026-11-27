@@ -72,7 +72,7 @@ Under **Landing scene**, leave **Random** selected to draw from your theme’s t
 
 ## Change the editor cursor
 
-Open **settings** from Home or press `⌘,` while editing. Choose **Bar**, **Block**, or **Underline** under **Cursor shape**. Under **Cursor movement**, use **Immediate** for direct movement or **Smooth** for a short transition. Smooth movement respects macOS Reduce Motion.
+Open **settings** from Home or press `⌘,` while editing. Choose **Bar**, **Block**, or **Underline** under **Cursor shape**. **Cursor movement** defaults to **Smooth** for a short transition. Choose **Immediate** for direct movement. Smooth movement respects macOS Reduce Motion.
 
 Enable **Custom cursor color** to choose a color, or turn it off to use the theme color. Turn off **Blink cursor** for a steady cursor. When blinking is on, choose **Sharp** or **Fade** under **Blink style**. xuy remembers these choices when you relaunch.
 
