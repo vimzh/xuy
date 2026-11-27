@@ -1,4 +1,4 @@
-// Position the app-styled sidebar menu and let WebKit handle light dismissal.
+// Manage the sidebar menu without WebKit dismissing it on the opening right-button release.
 const sidebar = document.getElementById("notebook-files");
 const menu = document.getElementById("sidebar-context-menu");
 const workspace = sidebar.closest(".workspace");
@@ -55,9 +55,12 @@ sidebar.addEventListener("keydown", event => {
     openFromKeyboard();
 }, options);
 
-document.addEventListener("focusin", event => {
+function dismissFromOutside(event) {
     if (!menu.contains(event.target)) dismiss();
-}, options);
+}
+
+document.addEventListener("focusin", dismissFromOutside, options);
+document.addEventListener("pointerdown", dismissFromOutside, { ...options, capture: true });
 window.addEventListener("resize", dismiss, options);
 
 const inertChanged = new MutationObserver(() => {

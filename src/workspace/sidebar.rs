@@ -115,7 +115,7 @@ pub(crate) fn WorkspaceSidebar(
 #[component]
 fn SidebarContextMenu(on_action: EventHandler<&'static str>) -> Element {
     rsx! {
-        div { id: "sidebar-context-menu", popover: "auto", role: "group",
+        div { id: "sidebar-context-menu", popover: "manual", role: "group",
             aria_label: "Create in the current folder",
             Button {
                 autofocus: true,
