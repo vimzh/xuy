@@ -7,9 +7,9 @@ xuy is a minimal, monochrome personal notes app for macOS, built in Rust with Di
 | Area | Requirement | Acceptance check |
 | --- | --- | --- |
 | Launch screen | Center the regular-weight xuy name beneath the first frame of the black hole ASCII art. Show **new**, **open**, **settings**, and **docs** in that order, one option per row, with **Recently Opened** below. Use a light, monochrome layout with monospace text throughout. [Black hole by ascii.rest](https://ascii.rest/black-hole/) | Launch the app to see the black hole above xuy and four borderless rows in a narrow centered column. Each row has a Hugeicons outline icon followed by its label on the left and a boxed placeholder shortcut on the right. |
-| Sidebar | Show a **New Note** action and **Folders**. | The sidebar exposes those two entries. |
-| Notes | Create a note, write and edit its content, and reopen it later. | Create a note, enter text, switch away, and reopen it with the saved text intact. |
-| Folders | Create folders and use them to organize and browse notes. | Create a folder, place a note in it, and reopen the note by browsing that folder. |
+| Notebook | Open a local folder as a notebook with the macOS folder picker. When no notebook is open, **new** first asks for a folder. | Open a folder and see its Markdown files and subfolders in the sidebar. |
+| Notes | Create a named Markdown file in the current folder, edit and save its source, and read it as rendered Markdown. | Create a note, enter Markdown, save it, and reopen it to see the rendered content. |
+| Folders | Browse existing subfolders of the notebook and create notes inside them. Read only the folder being viewed and the note being opened. | Open a nested folder, create a note there, and reopen it by browsing back to that folder. |
 | Fonts | Offer iA Writer Mono, iA Writer Duo, iA Writer Quattro, and Helvetica Neue. [iA’s font downloads](https://ia.net/downloads/fonts) | Check that the picker lists all four families and applies each one to the editor when selected. |
 
 ## Working assumptions
@@ -19,7 +19,7 @@ xuy is a minimal, monochrome personal notes app for macOS, built in Rust with Di
 ## Design decisions for later passes
 
 - Decide the window layout, spacing, and visual style step by step in the running desktop app.
-- Decide where notes appear when a folder is selected, where the font picker lives, and whether the selected font applies across the app or per note.
+- Decide how folder creation and moving notes should work, where the font picker lives, and whether the selected font applies across the app or per note.
 
 ## Development sequence
 

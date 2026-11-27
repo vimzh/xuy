@@ -1,0 +1,226 @@
+.workspace {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    background: #fff;
+    text-align: left;
+}
+
+.workspace-header,
+.folder-toolbar,
+.editor-toolbar,
+.editor-actions,
+.unsaved-choice,
+.new-note {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.workspace-header {
+    min-width: 0;
+    padding: 12px 20px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.workspace-header h1,
+.note-title {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+    line-height: 1.5;
+    letter-spacing: normal;
+}
+
+.workspace button {
+    display: inline-block;
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.workspace button:enabled {
+    cursor: pointer;
+}
+
+.workspace button:enabled:hover,
+.folder-entry.current-note {
+    background: #f3f3f3;
+}
+
+.workspace button:disabled {
+    color: #777;
+}
+
+.workspace-body {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(160px, 22%) minmax(0, 1fr);
+}
+
+.folder-list {
+    min-width: 0;
+    padding: 16px 12px;
+    border-right: 1px solid #e5e5e5;
+    overflow: auto;
+}
+
+.folder-toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.folder-path {
+    margin: 18px 8px 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.folder-list ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.workspace .folder-entry {
+    display: block;
+    width: 100%;
+    border-color: transparent;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.folder-empty,
+.workspace-message,
+.note-status {
+    color: #555;
+    font-size: 13px;
+}
+
+.folder-empty {
+    padding-inline: 8px;
+}
+
+.workspace-content,
+.note-editor {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.workspace-content {
+    padding: 16px 20px;
+    overflow: auto;
+}
+
+.workspace-error {
+    margin: 0 0 14px;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.new-note,
+.unsaved-choice {
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.new-note input,
+.note-input {
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    color: inherit;
+    font: inherit;
+}
+
+.new-note input {
+    width: min(100%, 18rem);
+}
+
+.editor-toolbar,
+.editor-actions {
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.editor-toolbar {
+    margin-bottom: 14px;
+}
+
+.note-input,
+.markdown-preview {
+    flex: 1;
+    min-height: 0;
+}
+
+.note-input {
+    padding: 12px;
+    resize: none;
+}
+
+.markdown-preview {
+    overflow: auto;
+    overflow-wrap: anywhere;
+    line-height: 1.65;
+}
+
+.markdown-preview :is(h1, h2, h3) {
+    margin: 0.85em 0 0.45em;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: normal;
+}
+
+.markdown-preview h1 { font-size: 1.6em; }
+.markdown-preview h2 { font-size: 1.35em; }
+
+.markdown-preview pre {
+    padding: 12px;
+    background: #f5f5f5;
+    overflow: auto;
+}
+
+.markdown-preview blockquote {
+    margin-inline: 0;
+    padding-inline-start: 12px;
+    border-inline-start: 2px solid #ccc;
+}
+
+.markdown-preview :is(th, td) {
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+}
+
+.markdown-preview a {
+    color: inherit;
+}
+
+.markdown-preview input {
+    accent-color: #555;
+}
+
+@media (max-width: 520px) {
+    .workspace-body {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .folder-list {
+        max-height: 25vh;
+        border-right: 0;
+        border-bottom: 1px solid #e5e5e5;
+    }
+}
