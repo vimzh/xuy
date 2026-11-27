@@ -5,14 +5,42 @@ const pane = sidebar.firstElementChild;
 const workspace = sidebar.closest(".workspace");
 const listeners = new AbortController();
 const options = { signal: listeners.signal };
+const widthKey = "xuy.sidebar-width";
 let drag;
 let minimum;
 let maximum;
+let preferredWidth;
+
+function applyWidth(width) {
+    preferredWidth = width;
+    // Keep the user preference separate from the workspace's reactive inline styles.
+    document.documentElement.style.setProperty(`--sidebar-preferred-width`, `${width}px`);
+}
+
+try {
+    const saved = localStorage.getItem(widthKey);
+    if (saved !== null) {
+        const width = Number(saved);
+        if (!Number.isSafeInteger(width) || width <= 0) throw new Error("Invalid saved width");
+        applyWidth(width);
+    }
+} catch (error) {
+    console.error("Could not restore the sidebar width:", error);
+}
+
+function saveWidth() {
+    if (preferredWidth === undefined) return;
+    try {
+        localStorage.setItem(widthKey, String(preferredWidth));
+    } catch (error) {
+        console.error("Could not save the sidebar width:", error);
+    }
+}
 
 function resizeTo(width) {
     const next = Math.round(Math.min(maximum, Math.max(minimum, width)));
     if (Number.isFinite(next)) {
-        workspace.style.setProperty("--sidebar-preferred-width", `${next}px`);
+        applyWidth(next);
     }
 }
 
@@ -49,6 +77,7 @@ divider.addEventListener("lostpointercapture", (event) => {
     if (event.pointerId !== drag?.pointerId) return;
     drag = undefined;
     workspace.removeAttribute("data-sidebar-resizing");
+    saveWidth();
 }, options);
 
 divider.addEventListener("keydown", (event) => {
@@ -63,6 +92,7 @@ divider.addEventListener("keydown", (event) => {
     }
     event.preventDefault();
     resizeTo(width);
+    saveWidth();
 }, options);
 
 const observer = new ResizeObserver(syncRange);

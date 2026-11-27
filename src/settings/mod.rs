@@ -5,6 +5,7 @@ pub(crate) mod font_size;
 pub(crate) mod page_width;
 pub(crate) mod scene;
 pub(crate) mod theme;
+pub(crate) mod toggle;
 pub(crate) mod writing_style;
 pub(crate) mod zoom;
 
@@ -21,7 +22,7 @@ use crate::ui::{Button, ButtonKind, Dialog, DialogScrim};
 #[component]
 pub(crate) fn Settings(
     cursor: Signal<Option<CursorOptions>>,
-    mut page_width: Signal<PageWidth>,
+    page_width: Signal<PageWidth>,
     appearance: Signal<Appearance>,
     dark: Signal<bool>,
     scenes: Signal<ScenePreferences>,
@@ -49,7 +50,7 @@ pub(crate) fn Settings(
                 PageWidthSelect {
                     label: "Writing width",
                     width: page_width(),
-                    on_change: move |width| page_width.set(width),
+                    on_change: move |width: PageWidth| width.set(page_width),
                 }
             }
             CursorSettings { cursor }

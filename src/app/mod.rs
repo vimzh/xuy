@@ -37,7 +37,7 @@ pub(crate) fn App() -> Element {
     let mut terminal_state = use_signal(terminal::State::default);
     let mut command_open = use_signal(|| false);
     let busy = use_signal(|| false);
-    let mut page_width = use_signal(page_width::PageWidth::default);
+    let page_width = use_signal(page_width::PageWidth::load);
     let mut edit_in_preview = use_signal(native::load_preview_editing);
     let cursor = cursor::use_cursor_options();
     let settings_font = use_signal(|| FontPreference::Settings.load());
@@ -211,7 +211,7 @@ pub(crate) fn App() -> Element {
             if let Some(option) = theme::appearance_for_id(id) {
                 appearance.set(option);
             } else if let Some(width) = page_width::PageWidth::for_command(id) {
-                page_width.set(width);
+                width.set(page_width);
             } else if !writing_style::apply_style_command(id, writing_style)
                 && !FontPreference::Settings.apply_command(id, settings_font)
                 && !FontPreference::Markdown.apply_command(id, markdown_font)

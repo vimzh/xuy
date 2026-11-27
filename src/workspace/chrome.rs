@@ -24,7 +24,7 @@ pub(crate) fn NotebookChrome(
     parent: Option<PathBuf>,
     busy: bool,
     on_parent: EventHandler<PathBuf>,
-    mut page_width: Signal<PageWidth>,
+    page_width: Signal<PageWidth>,
     view_mode: ViewMode,
     can_preview: bool,
     on_view_mode: EventHandler<ViewMode>,
@@ -112,7 +112,7 @@ pub(crate) fn NotebookChrome(
                             PageWidthSelect {
                                 label: "Writing width",
                                 width: page_width(),
-                                on_change: move |width| page_width.set(width),
+                                on_change: move |width: PageWidth| width.set(page_width),
                             }
                         }
                         Dropdown { icon: "{icons}/view.svg", active: view_mode != ViewMode::Edit,

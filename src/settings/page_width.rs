@@ -2,6 +2,12 @@
 
 use dioxus::prelude::*;
 
+#[cfg(target_os = "macos")]
+use objc2_foundation::{NSString, NSUserDefaults};
+
+#[cfg(target_os = "macos")]
+const KEY: &str = "xuy.page-width";
+
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) enum PageWidth {
     Narrow,
@@ -26,6 +32,34 @@ impl PageWidth {
         Self::OPTIONS
             .iter()
             .find_map(|&(width, option_id, _, _)| (option_id == id).then_some(width))
+    }
+
+    pub(crate) fn load() -> Self {
+        #[cfg(target_os = "macos")]
+        if let Some(value) =
+            NSUserDefaults::standardUserDefaults().objectForKey(&NSString::from_str(KEY))
+        {
+            if let Ok(id) = value.downcast::<NSString>()
+                && let Some(width) = Self::for_command(&id.to_string())
+            {
+                return width;
+            }
+            eprintln!("Could not restore writing width: unknown preset");
+        }
+        Self::default()
+    }
+
+    pub(crate) fn set(self, mut width: Signal<Self>) {
+        #[cfg(target_os = "macos")]
+        {
+            let (_, id, _, _) = Self::OPTIONS[self as usize];
+            // The command ID is a stable property-list string.
+            unsafe {
+                NSUserDefaults::standardUserDefaults()
+                    .setObject_forKey(Some(&NSString::from_str(id)), &NSString::from_str(KEY));
+            }
+        }
+        width.set(self);
     }
 }
 

@@ -16,7 +16,7 @@ Press `⌘K` to open the command bar from Home or while writing. Type to filter 
 
 Search for a setting such as **Writing Font**, **Line Spacing**, **Code Block Theme**, or **Cursor Shape** to change it directly. The current choices have checkmarks. With a page open, use **Show Preview**, **Edit Source**, or **Open Side by Side**. **Save Page** appears when the page has unsaved edits, and **Previous Page** and **Next Page** appear when there is page history in that direction.
 
-Drag the divider between the left sidebar and editor to change the sidebar width. With the divider focused, use the left and right arrow keys to resize it, or use `Home` and `End` for its width limits. In a narrow window, the file list moves above the editor. Use the sidebar buttons on either end of the title bar to show or hide each sidebar.
+Drag the divider between the left sidebar and editor to change the sidebar width. With the divider focused, use the left and right arrow keys to resize it, or use `Home` and `End` for its width limits. In a narrow window, the file list moves above the editor. Use the sidebar buttons on either end of the title bar to show or hide each sidebar. xuy remembers the sidebar width and which sidebars are open.
 
 ## Create, edit, and save a note
 
@@ -56,7 +56,7 @@ Drop PNG, JPEG, GIF, or WebP files from Finder onto the Markdown source in Edit 
 
 The bottom bar shows the file name, the heading path at your cursor, and the full draft’s word count. **Body** indicates that the cursor is outside a heading section. Preview keeps the last editing location in the bar.
 
-You can also change **Writing width** in Settings. Settings and the toolbar share the same selection for Edit and Preview.
+You can also change **Writing width** in Settings. Settings and the toolbar share the same selection for Edit and Preview. xuy remembers the writing width and app zoom when you relaunch.
 
 ## Use the outline and highlights
 

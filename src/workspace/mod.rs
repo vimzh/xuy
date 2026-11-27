@@ -33,6 +33,7 @@ use crate::notebook::index::{NoteTime, use_folder_index};
 use crate::notebook::{self, Entry};
 use crate::settings::cursor::CursorOptions;
 use crate::settings::page_width::PageWidth;
+use crate::settings::toggle::use_saved_toggle;
 use crate::settings::writing_style::WritingStyle;
 use crate::ui::{Button, ButtonKind};
 
@@ -76,8 +77,9 @@ pub(crate) fn Workspace(
     let mut saving = use_signal(|| false);
     let mut view_mode = use_signal(ViewMode::default);
     let mut preview_anchor = use_signal(|| None::<String>);
-    let mut sidebar_open = use_signal(|| true);
-    let mut writing_sidebar_open = use_signal(|| true);
+    let (sidebar_open, toggle_sidebar) = use_saved_toggle("xuy.sidebar-open", true);
+    let (writing_sidebar_open, toggle_writing_sidebar) =
+        use_saved_toggle("xuy.writing-sidebar-open", true);
     let mut chrome_hidden = use_signal(|| false);
     let mut history = use_signal(|| {
         let mut history = NoteHistory::default();
@@ -534,7 +536,6 @@ pub(crate) fn Workspace(
             chrome_hidden.set(false);
         }
     };
-    let mut toggle_sidebar = move |_| sidebar_open.toggle();
     let mut begin = move |kind| {
         if !*busy.peek() && *naming.peek() != Some(kind) {
             chrome_hidden.set(false);
@@ -554,7 +555,7 @@ pub(crate) fn Workspace(
                 }
             });
         }
-        native::TOGGLE_SIDEBAR => toggle_sidebar(()),
+        native::TOGGLE_SIDEBAR => toggle_sidebar.call(()),
         native::TOGGLE_PREVIEW => {
             let next = view_mode.peek().toggle_preview();
             change_view(next);
@@ -713,7 +714,7 @@ pub(crate) fn Workspace(
                 page_width, view_mode: view_mode(), can_preview, on_view_mode: change_view,
                 on_toggle: toggle_sidebar,
                 writing_sidebar_open: has_note.then_some(note_tools_open),
-                on_toggle_writing_sidebar: move |_| writing_sidebar_open.toggle(),
+                on_toggle_writing_sidebar: toggle_writing_sidebar,
                 on_back: move |_| move_history(-1),
                 on_forward: move |_| move_history(1),
             }
