@@ -43,6 +43,12 @@ pub(crate) async fn pick_notebook(start_new: bool) -> io::Result<Option<OpenNote
     }))
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum NewEntry {
+    Note,
+    Folder,
+}
+
 #[component]
 pub(crate) fn Workspace(
     opened: OpenNotebook,
@@ -63,7 +69,7 @@ pub(crate) fn Workspace(
     let mut sidebar_open = use_signal(|| true);
     let mut chrome_hidden = use_signal(|| false);
     let mut history = use_signal(NoteHistory::default);
-    let mut naming = use_signal(|| opened.start_new);
+    let mut naming = use_signal(|| opened.start_new.then_some(NewEntry::Note));
     let mut name = use_signal(String::new);
     let mut busy = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
@@ -124,7 +130,7 @@ pub(crate) fn Workspace(
                     selected.set(Some(path));
                     preview.set(false);
                     chrome_hidden.set(false);
-                    naming.set(false);
+                    naming.set(None);
                 }
                 Err(failure) => error.set(Some(failure.to_string())),
             }
@@ -152,33 +158,44 @@ pub(crate) fn Workspace(
     let create = move |event: FormEvent| {
         event.prevent_default();
         async move {
+            let Some(kind) = *naming.peek() else { return };
             if *busy.peek() {
                 return;
             }
             busy.set(true);
             error.set(None);
-            if allow_leave(draft, saved, confirmation).await {
+            if kind == NewEntry::Folder || allow_leave(draft, saved, confirmation).await {
                 let root = root.peek().clone();
                 let folder = directory.peek().clone();
                 let title = name.peek().clone();
                 let result = on_disk(move || {
-                    let path = notebook::create(&root, &folder, &title)?;
-                    Ok((path, notebook::list(&root, &folder)))
+                    let note = match kind {
+                        NewEntry::Note => Some(notebook::create(&root, &folder, &title)?),
+                        NewEntry::Folder => {
+                            notebook::create_folder(&root, &folder, &title)?;
+                            None
+                        }
+                    };
+                    Ok((note, notebook::list(&root, &folder)))
                 })
                 .await;
                 match result {
-                    Ok((path, children)) => {
+                    Ok((note, children)) => {
                         match children {
                             Ok(children) => entries.set(children),
-                            Err(failure) => error.set(Some(format!("Note created. {failure}"))),
+                            Err(failure) => {
+                                error.set(Some(format!("Created successfully. {failure}")))
+                            }
                         }
-                        saved.set(String::new());
-                        draft.set(String::new());
-                        history.write().visit(&path);
-                        selected.set(Some(path));
-                        preview.set(false);
+                        if let Some(path) = note {
+                            saved.set(String::new());
+                            draft.set(String::new());
+                            history.write().visit(&path);
+                            selected.set(Some(path));
+                            preview.set(false);
+                        }
                         chrome_hidden.set(false);
-                        naming.set(false);
+                        naming.set(None);
                     }
                     Err(failure) => error.set(Some(failure.to_string())),
                 }
@@ -255,7 +272,17 @@ pub(crate) fn Workspace(
         }
     };
     let mut toggle_sidebar = move |_| sidebar_open.toggle();
+    let mut begin = move |kind| {
+        if !*busy.peek() && *naming.peek() != Some(kind) {
+            chrome_hidden.set(false);
+            error.set(None);
+            name.set(String::new());
+            naming.set(Some(kind));
+        }
+    };
     use_muda_event_handler(move |event| match event.id().0.as_str() {
+        notebook_menu::NEW_NOTE => begin(NewEntry::Note),
+        notebook_menu::NEW_FOLDER => begin(NewEntry::Folder),
         notebook_menu::HOME => {
             spawn(go_home());
         }
@@ -273,7 +300,7 @@ pub(crate) fn Workspace(
 
     let filename = match selected.read().as_ref() {
         Some(path) => display_name(path),
-        None if naming() => "Untitled".to_owned(),
+        None if naming() == Some(NewEntry::Note) => "Untitled".to_owned(),
         None => String::new(),
     };
     let can_back = !busy() && history.read().destination(-1).is_some();
@@ -340,11 +367,13 @@ pub(crate) fn Workspace(
                             button { onclick: move |_| resolve_confirmation(true), "Discard changes" }
                         }
                     }
-                    if naming() {
-                        form { class: "new-note", onsubmit: create,
-                            label { r#for: "note-name", "Note name" }
+                    if let Some(kind) = naming() {
+                        form { key: "{kind as u8}", class: "new-note", onsubmit: create,
+                            label { r#for: "entry-name",
+                                if kind == NewEntry::Note { "Note name" } else { "Folder name" }
+                            }
                             input {
-                                id: "note-name",
+                                id: "entry-name",
                                 value: "{name}",
                                 required: true,
                                 disabled: busy(),
@@ -352,7 +381,7 @@ pub(crate) fn Workspace(
                                 oninput: move |event| name.set(event.value()),
                             }
                             button { r#type: "submit", disabled: busy(), "Create" }
-                            button { r#type: "button", disabled: busy(), onclick: move |_| naming.set(false), "Cancel" }
+                            button { r#type: "button", disabled: busy(), onclick: move |_| naming.set(None), "Cancel" }
                         }
                     }
                     if let Some(path) = selected() {
@@ -364,7 +393,7 @@ pub(crate) fn Workspace(
                             },
                             on_save: move |_| save(None),
                         }
-                    } else if !naming() {
+                    } else if naming().is_none() {
                         p { class: "workspace-message", "Select a Markdown note." }
                     }
                 }

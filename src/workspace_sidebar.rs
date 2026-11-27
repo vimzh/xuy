@@ -22,6 +22,8 @@ pub(crate) fn WorkspaceSidebar(
     busy: bool,
     on_browse: EventHandler<Entry>,
 ) -> Element {
+    #[cfg(target_os = "macos")]
+    let window = dioxus::desktop::use_window();
     let mut today = use_signal(local_today);
     use_future(move || async move {
         loop {
@@ -71,6 +73,18 @@ pub(crate) fn WorkspaceSidebar(
     rsx! {
         document::Stylesheet { href: asset!("/assets/sidebar.css") }
         aside { class: "notebook-sidebar", aria_label: "Notebook files",
+            oncontextmenu: move |event| {
+                #[cfg(target_os = "macos")]
+                {
+                    event.prevent_default();
+                    if !busy {
+                        let window = window.window.clone();
+                        spawn(async move { crate::notebook_menu::show_sidebar(&window) });
+                    }
+                }
+                #[cfg(not(target_os = "macos"))]
+                let _ = event;
+            },
             if let Some(error) = details_error {
                 p { class: "sidebar-status", role: "status", title: "{error}", "Note details unavailable." }
             }

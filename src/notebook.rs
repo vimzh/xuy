@@ -46,19 +46,7 @@ pub(crate) fn list(root: &Path, folder: &Path) -> io::Result<Vec<Entry>> {
 }
 
 pub(crate) fn create(root: &Path, folder: &Path, name: &str) -> io::Result<PathBuf> {
-    let name = name.trim();
-    if name.is_empty()
-        || hidden(name.as_ref())
-        || name
-            .chars()
-            .any(|ch| ch.is_control() || matches!(ch, '/' | '\\' | ':'))
-    {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            "Enter a visible note name without path separators or control characters",
-        ));
-    }
-
+    let name = valid_name(name, "note")?;
     check_folder(root, folder)?;
     let path = if markdown(Path::new(name)) {
         folder.join(name)
@@ -71,6 +59,29 @@ pub(crate) fn create(root: &Path, folder: &Path, name: &str) -> io::Result<PathB
         .open(&path)
         .map_err(|err| at(err, "Create note", &path))?;
     Ok(path)
+}
+
+pub(crate) fn create_folder(root: &Path, folder: &Path, name: &str) -> io::Result<()> {
+    let name = valid_name(name, "folder")?;
+    check_folder(root, folder)?;
+    let path = folder.join(name);
+    fs::create_dir(&path).map_err(|error| at(error, "Create folder", &path))
+}
+
+fn valid_name<'a>(name: &'a str, kind: &str) -> io::Result<&'a str> {
+    let name = name.trim();
+    if name.is_empty()
+        || hidden(name.as_ref())
+        || name
+            .chars()
+            .any(|ch| ch.is_control() || matches!(ch, '/' | '\\' | ':'))
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("Enter a visible {kind} name without path separators or control characters"),
+        ));
+    }
+    Ok(name)
 }
 
 pub(crate) fn read(root: &Path, path: &Path) -> io::Result<String> {
@@ -283,6 +294,22 @@ mod tests {
                 .kind(),
             io::ErrorKind::InvalidInput
         );
+        Ok(())
+    }
+
+    #[test]
+    fn creates_named_folders_without_overwriting_or_leaving_the_root() -> io::Result<()> {
+        let temp = tempfile::tempdir()?;
+        let (root, _) = open_root(temp.path())?;
+        create_folder(&root, &root, " Drafts ")?;
+        create_folder(&root, &root.join("Drafts"), "Nested")?;
+        assert!(root.join("Drafts/Nested").is_dir());
+        assert_eq!(
+            create_folder(&root, &root, "Drafts").unwrap_err().kind(),
+            io::ErrorKind::AlreadyExists
+        );
+        assert!(create_folder(&root, &root, "../Outside").is_err());
+        assert!(create_folder(&root, root.parent().unwrap(), "Outside").is_err());
         Ok(())
     }
 
