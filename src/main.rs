@@ -3,6 +3,7 @@ mod editor;
 mod note_history;
 mod notebook;
 mod notebook_menu;
+mod page_width;
 mod workspace;
 mod workspace_sidebar;
 
@@ -26,6 +27,7 @@ fn main() {
 #[component]
 fn App() -> Element {
     let mut opened = use_signal(|| None::<workspace::OpenNotebook>);
+    let page_width = use_signal(page_width::PageWidth::default);
     let mut opening = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
     let icons = asset!("/assets/hugeicons", AssetOptions::folder());
@@ -54,7 +56,7 @@ fn App() -> Element {
         document::Stylesheet { href: asset!("/assets/app.css") }
         document::Stylesheet { href: "{mono}/fonts.css" }
         if let Some(notebook) = opened() {
-            workspace::Workspace { opened: notebook, on_home: move |_| opened.set(None) }
+            workspace::Workspace { opened: notebook, page_width, on_home: move |_| opened.set(None) }
         } else {
             main { class: "landing", aria_busy: opening(),
                 pre { class: "black-hole", aria_hidden: true,

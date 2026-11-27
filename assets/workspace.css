@@ -77,6 +77,10 @@
     margin-inline: auto;
 }
 
+.workspace-content > .note-editor {
+    width: min(100%, var(--editor-page-width, 60ch));
+}
+
 .workspace-message {
     color: #555;
     font-size: 13px;

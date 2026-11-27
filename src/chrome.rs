@@ -4,6 +4,8 @@ use dioxus::desktop::use_window;
 use dioxus::prelude::*;
 use dioxus_elements::input_data::MouseButton;
 
+use crate::page_width::{PageWidth, PageWidthSelect};
+
 #[component]
 pub(crate) fn NotebookChrome(
     filename: String,
@@ -12,6 +14,10 @@ pub(crate) fn NotebookChrome(
     sidebar_open: bool,
     can_back: bool,
     can_forward: bool,
+    mut page_width: Signal<PageWidth>,
+    preview: bool,
+    can_preview: bool,
+    on_preview: EventHandler<()>,
     on_toggle: EventHandler<()>,
     on_back: EventHandler<()>,
     on_forward: EventHandler<()>,
@@ -71,13 +77,23 @@ pub(crate) fn NotebookChrome(
                             }
                         }
                     }
-                    button {
-                        class: "chrome-settings",
-                        r#type: "button",
-                        aria_label: "Page configuration",
-                        title: "Page configuration",
-                        disabled: true,
-                        img { src: "{icons}/settings-01.svg", alt: "", width: "18", height: "18" }
+                    div { class: "chrome-right", role: "group", aria_label: "Writing controls",
+                        div { class: "chrome-width",
+                            PageWidthSelect {
+                                label: "Writing width",
+                                width: page_width(),
+                                on_change: move |width| page_width.set(width),
+                            }
+                        }
+                        button {
+                            class: "chrome-preview",
+                            r#type: "button",
+                            aria_pressed: preview,
+                            title: if preview { "Edit source" } else { "Show preview" },
+                            disabled: !can_preview,
+                            onclick: move |_| on_preview.call(()),
+                            "Preview"
+                        }
                     }
                 }
                 div { class: "chrome-filename",

@@ -41,7 +41,7 @@
 }
 
 .chrome-left,
-.chrome-settings {
+.chrome-right {
     grid-area: 1 / 1;
 }
 
@@ -103,7 +103,7 @@
     background: #f3f3f3;
 }
 
-.workspace .notebook-chrome button:focus-visible {
+.workspace .notebook-chrome :is(button, select):focus-visible {
     outline: 2px solid #666;
     outline-offset: -2px;
 }
@@ -112,10 +112,59 @@
     opacity: .34;
 }
 
-.chrome-settings {
+.chrome-right {
     position: relative;
     justify-self: end;
-    margin-right: 9px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-inline-end: 9px;
+    font-size: 11px;
+}
+
+.chrome-width {
+    position: relative;
+}
+
+.chrome-width select {
+    appearance: none;
+    display: block;
+    height: 18px;
+    border: 0;
+    border-radius: 4px;
+    padding: 0 14px 0 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.chrome-width select:hover {
+    background: #f3f3f3;
+}
+
+.chrome-width::after {
+    position: absolute;
+    top: 6px;
+    right: 5px;
+    width: 4px;
+    height: 4px;
+    border-right: 1px solid currentColor;
+    border-bottom: 1px solid currentColor;
+    transform: rotate(45deg);
+    pointer-events: none;
+    content: "";
+}
+
+.workspace .notebook-chrome .chrome-preview {
+    width: auto;
+    padding-inline: 4px;
+    font: inherit;
+}
+
+.chrome-preview[aria-pressed="true"] {
+    text-decoration: underline;
+    text-underline-offset: 2px;
 }
 
 @media (max-width: 520px) {

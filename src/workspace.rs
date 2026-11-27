@@ -13,6 +13,7 @@ use crate::editor::Editor;
 use crate::note_history::NoteHistory;
 use crate::notebook::{self, Entry};
 use crate::notebook_menu;
+use crate::page_width::PageWidth;
 use crate::workspace_sidebar::WorkspaceSidebar;
 
 #[derive(Clone, PartialEq)]
@@ -40,7 +41,11 @@ pub(crate) async fn pick_notebook(start_new: bool) -> io::Result<Option<OpenNote
 }
 
 #[component]
-pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Element {
+pub(crate) fn Workspace(
+    opened: OpenNotebook,
+    page_width: Signal<PageWidth>,
+    on_home: EventHandler<()>,
+) -> Element {
     let root = use_signal(|| opened.root);
     let mut directory = use_signal(|| root.peek().clone());
     let mut entries = use_signal(|| opened.entries);
@@ -214,15 +219,18 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
             on_home.call(());
         }
     };
-    use_muda_event_handler(move |event| match event.id().0.as_str() {
-        notebook_menu::HOME => {
-            spawn(go_home());
-        }
-        notebook_menu::TOGGLE_PREVIEW if !*busy.peek() && selected.peek().is_some() => {
+    let mut toggle_preview = move |_| {
+        if !*busy.peek() && selected.peek().is_some() {
             let next = !*preview.peek();
             preview.set(next);
             chrome_hidden.set(false);
         }
+    };
+    use_muda_event_handler(move |event| match event.id().0.as_str() {
+        notebook_menu::HOME => {
+            spawn(go_home());
+        }
+        notebook_menu::TOGGLE_PREVIEW => toggle_preview(()),
         notebook_menu::SAVE => {
             spawn(save(()));
         }
@@ -240,11 +248,14 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
     };
     let can_back = !busy() && history.read().destination(-1).is_some();
     let can_forward = !busy() && history.read().destination(1).is_some();
+    let can_preview = !busy() && selected.read().is_some();
+    let columns = page_width().columns();
 
     rsx! {
         document::Stylesheet { href: asset!("/assets/workspace.css") }
         main {
             class: "workspace",
+            style: "--editor-page-width: {columns}ch",
             aria_busy: busy() && confirmation.read().is_none(),
             onkeydown: move |event| {
                 if event.key() == Key::Escape && !event.is_composing() {
@@ -260,6 +271,7 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
             },
             NotebookChrome {
                 filename, dirty: dirty(), hidden: chrome_hidden, sidebar_open: sidebar_open(), can_back, can_forward,
+                page_width, preview: preview(), can_preview, on_preview: toggle_preview,
                 on_toggle: move |_| {
                     let next = !*sidebar_open.peek();
                     sidebar_open.set(next);
