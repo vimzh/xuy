@@ -8,6 +8,7 @@
     --control-border: #cecece;
     --hover: #eeeeee;
     --selected: #e5e5e5;
+    --text-selection: #d9d7cf;
     --inset: #ebebeb;
     --focus: #5c5c5c;
     --icon-filter: none;
@@ -28,10 +29,16 @@
         --control-border: #474747;
         --hover: #2d2d2d;
         --selected: #383838;
+        --text-selection: #484741;
         --inset: #292929;
         --focus: #a5a5a5;
         --icon-filter: invert(.9);
     }
+}
+
+::selection {
+    background: var(--text-selection);
+    color: var(--ink);
 }
 
 :where(.landing nav, .notebook-chrome, .dropdown) img,

@@ -2,7 +2,14 @@
     --chrome-control-size: clamp(22px, 4.5vw, 24px);
     /* Native traffic lights do not scale with the WebView. */
     --chrome-left-inset: calc(82px / var(--ui-zoom, 1));
-    --chrome-title-inset: min(clamp(172px, 40vw, 264px), 50%);
+    --chrome-gap: clamp(4px, 1.2vw, 8px);
+    --chrome-history-gap: 2px;
+    --chrome-left-controls: calc(var(--chrome-left-inset) + 4 * var(--chrome-control-size) + 2 * var(--chrome-gap) + var(--chrome-history-gap));
+    --chrome-right-min: calc(2 * var(--chrome-control-size) + 15px);
+    /* At narrow widths, share the space left by the controls between the two names. */
+    --chrome-folder-space: min(3rem, (100% - var(--chrome-left-controls) - var(--chrome-right-min)) / 2);
+    --chrome-side: clamp(var(--chrome-left-controls), max(28vw, calc(var(--chrome-left-controls) + var(--chrome-folder-space))), 19rem);
+    --chrome-right-side: clamp(var(--chrome-right-min), calc(100% - var(--chrome-side) - 4rem), var(--chrome-side));
     position: relative;
     /* The native traffic lights are centered 16px from the top. */
     padding-block: max(4px, calc(16px / var(--ui-zoom, 1) - var(--chrome-control-size) / 2));
@@ -36,7 +43,7 @@
 
 .chrome-strip {
     display: grid;
-    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    grid-template-columns: minmax(0, var(--chrome-side)) minmax(0, 1fr) minmax(0, var(--chrome-right-side));
     align-items: center;
     height: var(--chrome-control-size);
 }
@@ -63,17 +70,12 @@
     align-items: center;
 }
 
-.chrome-left,
-.chrome-right {
-    grid-area: 1 / 1;
-}
-
 .chrome-left {
     position: relative;
-    justify-self: start;
-    max-width: calc(var(--chrome-title-inset) - var(--chrome-left-inset) - 4px);
+    grid-area: 1 / 1;
+    min-width: 0;
     margin-inline-start: var(--chrome-left-inset);
-    gap: 8px;
+    gap: var(--chrome-gap);
 }
 
 .chrome-left > button,
@@ -83,7 +85,7 @@
 }
 
 .chrome-history {
-    gap: 2px;
+    gap: var(--chrome-history-gap);
 }
 
 .chrome-folder {
@@ -101,11 +103,11 @@
 }
 
 .chrome-filename {
-    position: absolute;
-    inset: 0 var(--chrome-title-inset);
+    grid-area: 1 / 2;
     display: flex;
     align-items: center;
     justify-content: center;
+    height: 1em;
     color: var(--ink);
     line-height: 1;
     pointer-events: none;
@@ -120,7 +122,7 @@
 }
 
 .chrome-filename-text[data-dirty="true"] {
-    padding-inline: 9px;
+    padding-inline: min(9px, 50%);
 }
 
 .chrome-filename-text[data-dirty="true"]::after {
@@ -170,6 +172,7 @@
 
 .chrome-right {
     position: relative;
+    grid-area: 1 / 3;
     justify-self: end;
     display: flex;
     align-items: center;
@@ -178,19 +181,11 @@
 }
 
 @media (max-width: 520px) {
-    .notebook-chrome {
-        --chrome-left-inset: calc(76px / var(--ui-zoom, 1));
-    }
-
     .workspace[data-sidebar-open="true"] .chrome-reveal::before {
         width: 100%;
     }
 
     .chrome-sidebar-rule {
         display: none;
-    }
-
-    .chrome-left {
-        gap: 4px;
     }
 }
