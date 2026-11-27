@@ -92,6 +92,21 @@ button {
     text-align: left;
 }
 
+.landing nav button {
+    border-radius: 4px;
+    padding-inline: 10px;
+}
+
+.landing nav button:enabled:hover {
+    background: var(--hover);
+    cursor: pointer;
+}
+
+.landing nav button:focus-visible {
+    outline: 1px solid var(--focus);
+    outline-offset: 2px;
+}
+
 kbd {
     display: flex;
     align-items: center;

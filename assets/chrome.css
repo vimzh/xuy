@@ -82,6 +82,10 @@
     flex: none;
 }
 
+.chrome-history {
+    gap: 2px;
+}
+
 .chrome-folder {
     min-width: 0;
     overflow: hidden;

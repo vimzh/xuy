@@ -7,7 +7,7 @@
     height: max-content;
     max-height: calc(100dvh - 32px);
     margin: auto;
-    padding: 5px;
+    padding: 6px;
     border: 1px solid var(--control-border);
     border-radius: 9px;
     background: var(--surface);
@@ -40,7 +40,7 @@
 
 .command-search {
     min-height: 38px;
-    margin-bottom: 3px;
+    margin-bottom: 4px;
 }
 
 #command-bar img {
@@ -92,6 +92,8 @@
 }
 
 #command-options {
+    display: grid;
+    gap: 2px;
     min-height: 0;
     margin: 0;
     padding: 0;

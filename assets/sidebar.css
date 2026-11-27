@@ -23,7 +23,7 @@
 .sidebar-entries {
     min-height: 0;
     margin: 0;
-    padding: 2px 4px;
+    padding: 5px 6px;
     overflow: auto;
     list-style: none;
     user-select: none;
@@ -40,7 +40,7 @@
     column-gap: 7px;
     width: 100%;
     min-height: 28px;
-    padding: 4px 7px;
+    padding: 4px 8px;
 }
 
 .workspace .notebook-sidebar .sidebar-entry[aria-current="true"] {
