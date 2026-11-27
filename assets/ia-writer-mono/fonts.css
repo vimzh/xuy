@@ -1,0 +1,15 @@
+@font-face {
+    font-family: "iA Writer Mono";
+    src: url("iAWriterMonoS-Regular.woff2") format("woff2");
+    font-weight: 400;
+}
+
+.landing,
+#starter-clock,
+.note-editor {
+    font-family: "iA Writer Mono", Menlo, monospace;
+}
+
+.markdown-preview :is(pre, code) {
+    font-family: inherit;
+}

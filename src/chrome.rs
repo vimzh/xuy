@@ -7,6 +7,7 @@ use dioxus_elements::input_data::MouseButton;
 #[component]
 pub(crate) fn NotebookChrome(
     filename: String,
+    dirty: bool,
     mut hidden: Signal<bool>,
     sidebar_open: bool,
     can_back: bool,
@@ -79,7 +80,9 @@ pub(crate) fn NotebookChrome(
                         img { src: "{icons}/settings-01.svg", alt: "", width: "18", height: "18" }
                     }
                 }
-                span { class: "chrome-filename", "{filename}" }
+                div { class: "chrome-filename",
+                    span { class: "chrome-filename-text", "data-dirty": dirty, "{filename}" }
+                }
             }
         }
     }

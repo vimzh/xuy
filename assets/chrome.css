@@ -1,7 +1,9 @@
 .notebook-chrome {
+    --chrome-top-inset: 9px;
     position: relative;
-    /* Center the text line on the native traffic lights and clear the buttons. */
-    padding-block: 8px 5px;
+    /* The native traffic lights are centered 16px from the top. */
+    padding-block: var(--chrome-top-inset) 2px;
+    font-size: 13px;
     user-select: none;
 }
 
@@ -39,7 +41,6 @@
 }
 
 .chrome-left,
-.chrome-filename,
 .chrome-settings {
     grid-area: 1 / 1;
 }
@@ -52,14 +53,38 @@
 }
 
 .chrome-filename {
-    overflow: hidden;
-    margin-inline: min(176px, 50%);
+    position: absolute;
+    inset: var(--chrome-top-inset) min(176px, 50%) auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 1em;
     color: #424242;
     line-height: 1;
-    text-align: center;
+    pointer-events: none;
+}
+
+.chrome-filename-text {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    pointer-events: none;
+}
+
+.chrome-filename-text[data-dirty="true"] {
+    padding-inline: 9px;
+}
+
+.chrome-filename-text[data-dirty="true"]::after {
+    position: absolute;
+    top: calc(50% - 2px);
+    right: 1px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    content: "";
 }
 
 .workspace .notebook-chrome button {
@@ -67,7 +92,7 @@
     grid-template-columns: none;
     place-items: center;
     width: 26px;
-    height: 24px;
+    height: 18px;
     border: 0;
     border-radius: 4px;
     padding: 0;
@@ -108,6 +133,6 @@
     }
 
     .chrome-filename {
-        margin-inline: min(150px, 50%);
+        inset-inline: min(150px, 50%);
     }
 }

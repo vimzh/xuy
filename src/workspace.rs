@@ -234,7 +234,6 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
     use_drop(|| notebook_menu::update(false, false, false, false, false));
 
     let filename = match selected.read().as_ref() {
-        Some(path) if dirty() => format!("{} •", display_name(path)),
         Some(path) => display_name(path),
         None if naming() => "Untitled".to_owned(),
         None => String::new(),
@@ -260,7 +259,7 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
                 }
             },
             NotebookChrome {
-                filename, hidden: chrome_hidden, sidebar_open: sidebar_open(), can_back, can_forward,
+                filename, dirty: dirty(), hidden: chrome_hidden, sidebar_open: sidebar_open(), can_back, can_forward,
                 on_toggle: move |_| {
                     let next = !*sidebar_open.peek();
                     sidebar_open.set(next);

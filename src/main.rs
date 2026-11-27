@@ -29,6 +29,7 @@ fn App() -> Element {
     let mut opening = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
     let icons = asset!("/assets/hugeicons", AssetOptions::folder());
+    let mono = asset!("/assets/ia-writer-mono", AssetOptions::folder());
     let actions = [
         ("new", "N", "add-01"),
         ("open", "O", "folder-open"),
@@ -51,10 +52,11 @@ fn App() -> Element {
 
     rsx! {
         document::Stylesheet { href: asset!("/assets/app.css") }
+        document::Stylesheet { href: "{mono}/fonts.css" }
         if let Some(notebook) = opened() {
             workspace::Workspace { opened: notebook, on_home: move |_| opened.set(None) }
         } else {
-            main { aria_busy: opening(),
+            main { class: "landing", aria_busy: opening(),
                 pre { class: "black-hole", aria_hidden: true,
                     "data-license": asset!("/assets/ascii-rest/LICENSE.txt"),
                     {include_str!("../assets/ascii-rest/black-hole.txt")}
