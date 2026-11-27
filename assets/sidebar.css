@@ -4,8 +4,8 @@
     min-width: 0;
     min-height: 0;
     border-right: 1px solid var(--workspace-rule);
-    background: #fbfbfb;
-    color: #202020;
+    background: var(--sidebar-surface);
+    color: var(--ink);
 }
 
 .workspace .notebook-sidebar button {
@@ -16,7 +16,7 @@
 }
 
 .workspace .notebook-sidebar button:enabled:hover {
-    background: #f0f0f0;
+    background: var(--hover);
 }
 
 .sidebar-entry-icon {
@@ -33,7 +33,7 @@
 }
 
 .sidebar-entries li {
-    border-bottom: 1px solid #e8e8e8;
+    border-bottom: 1px solid var(--workspace-rule);
 }
 
 .workspace .notebook-sidebar .sidebar-entry {
@@ -48,7 +48,7 @@
 }
 
 .workspace .notebook-sidebar .sidebar-entry[aria-current="true"] {
-    background: #ebebeb;
+    background: var(--selected);
 }
 
 .workspace .notebook-sidebar .sidebar-folder {
@@ -58,7 +58,7 @@
 }
 
 .notebook-sidebar button:focus-visible {
-    outline: 1px solid #262626;
+    outline: 1px solid var(--focus);
     outline-offset: -2px;
 }
 
@@ -70,7 +70,7 @@
 
 .sidebar-date {
     grid-column: 1;
-    color: #626262;
+    color: var(--muted);
     font-size: 10px;
     font-variant-numeric: tabular-nums;
     line-height: 1.35;
@@ -96,7 +96,7 @@
     grid-area: 2 / 3;
     display: -webkit-box;
     overflow: hidden;
-    color: #626262;
+    color: var(--muted);
     font-size: 11px;
     line-height: 1.3;
     overflow-wrap: anywhere;
@@ -110,6 +110,6 @@
 
 .sidebar-status {
     margin: 10px 11px;
-    color: #626262;
+    color: var(--muted);
     font-size: 11px;
 }

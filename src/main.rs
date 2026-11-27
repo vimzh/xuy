@@ -5,28 +5,31 @@ mod note_history;
 mod notebook;
 mod notebook_menu;
 mod page_width;
+mod theme;
 mod workspace;
 mod workspace_sidebar;
 
-use dioxus::desktop::{Config, WindowBuilder, tao::window::Theme};
+use dioxus::desktop::{Config, WindowBuilder};
 use dioxus::prelude::*;
 
 fn main() {
+    let appearance = theme::Appearance::load();
     let window = WindowBuilder::new()
         .with_title("xuy")
-        .with_theme(Some(Theme::Light));
+        .with_theme(appearance.native());
 
     LaunchBuilder::desktop()
         .with_cfg(
             Config::new()
                 .with_window(window)
-                .with_menu(notebook_menu::build()),
+                .with_menu(notebook_menu::build(appearance)),
         )
         .launch(App);
 }
 
 #[component]
 fn App() -> Element {
+    theme::use_appearance_menu();
     let mut opened = use_signal(|| None::<workspace::OpenNotebook>);
     let page_width = use_signal(page_width::PageWidth::default);
     let mut opening = use_signal(|| false);

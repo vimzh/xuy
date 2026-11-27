@@ -1147,6 +1147,7 @@ version = "0.1.0"
 dependencies = [
  "dioxus",
  "objc2-app-kit",
+ "objc2-foundation",
  "pulldown-cmark",
  "rfd",
  "tempfile",

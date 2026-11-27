@@ -1,8 +1,44 @@
 :root {
-    color-scheme: light;
-    background: #fff;
-    color: #000;
+    --surface: #fff;
+    --paper: #f5f3f0;
+    --sidebar-surface: #fbfbfb;
+    --ink: #1d1c1a;
+    --muted: #625e57;
+    --workspace-rule: #e3dfd9;
+    --control-border: #d2cdc5;
+    --hover: #f0ede8;
+    --selected: #eae5dd;
+    --inset: #eeeae4;
+    --focus: #655a4e;
+    --icon-filter: none;
+    --menu-shadow: rgb(0 0 0 / 10%);
+    color-scheme: light dark;
+    background: var(--surface);
+    color: var(--ink);
     font: 15px/1.5 Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --surface: #1e1d1c;
+        --paper: #242220;
+        --sidebar-surface: #211f1d;
+        --ink: #e8e3db;
+        --muted: #aaa39a;
+        --workspace-rule: #38342f;
+        --control-border: #4a4540;
+        --hover: #302c27;
+        --selected: #3b352f;
+        --inset: #2d2925;
+        --focus: #aa9c8b;
+        --icon-filter: invert(.9);
+        --menu-shadow: rgb(0 0 0 / 35%);
+    }
+}
+
+:where(.landing nav, .notebook-chrome, .dropdown) img,
+.sidebar-entry-icon {
+    filter: var(--icon-filter);
 }
 
 body {
@@ -64,9 +100,9 @@ kbd {
     justify-content: center;
     gap: 3px;
     min-height: 22px;
-    border: 1px solid #d0d0d0;
+    border: 1px solid var(--control-border);
     border-radius: 4px;
-    background: #f7f7f7;
+    background: var(--inset);
     font: inherit;
     font-size: 12px;
     line-height: 1;

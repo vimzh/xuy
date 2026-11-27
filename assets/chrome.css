@@ -23,7 +23,7 @@
 }
 
 .chrome-drag {
-    border-bottom: 1px solid var(--workspace-rule, #e5e5e5);
+    border-bottom: 1px solid var(--workspace-rule);
 }
 
 .chrome-sidebar-rule {
@@ -32,7 +32,7 @@
     bottom: 0;
     left: calc(var(--sidebar-width, max(160px, 22%)) - 1px);
     width: 1px;
-    background: var(--workspace-rule, #e5e5e5);
+    background: var(--workspace-rule);
     pointer-events: none;
 }
 
@@ -66,7 +66,7 @@
     min-width: 0;
     overflow: hidden;
     gap: 4px;
-    color: #424242;
+    color: var(--muted);
     font-size: 11px;
 }
 
@@ -87,7 +87,7 @@
     align-items: center;
     justify-content: center;
     height: 1em;
-    color: #424242;
+    color: var(--ink);
     line-height: 1;
     pointer-events: none;
 }
@@ -132,11 +132,11 @@
 }
 
 .workspace .notebook-chrome button:enabled:hover {
-    background: #f3f3f3;
+    background: var(--hover);
 }
 
 .workspace .notebook-chrome button:focus-visible {
-    outline: 2px solid #666;
+    outline: 2px solid var(--focus);
     outline-offset: -2px;
 }
 
