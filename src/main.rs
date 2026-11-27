@@ -18,6 +18,7 @@ mod theme;
 mod workspace;
 mod workspace_session;
 mod workspace_sidebar;
+mod writing_style;
 mod zoom;
 
 use dioxus::desktop::{Config, WindowBuilder, use_muda_event_handler};
@@ -57,6 +58,7 @@ fn App() -> Element {
     let mut palette_command = use_signal(|| None::<&'static str>);
     let mut page_actions = use_signal(commands::PageActions::default);
     let mut command_open = use_signal(|| false);
+    let writing_style = use_signal(writing_style::WritingStyle::load);
     let busy = use_signal(|| false);
     let mut page_width = use_signal(page_width::PageWidth::default);
     let mut edit_in_preview = use_signal(notebook_menu::load_preview_editing);
@@ -84,6 +86,7 @@ fn App() -> Element {
     });
     let icons = asset!("/assets/hugeicons", AssetOptions::folder());
     let mono = asset!("/assets/ia-writer-mono", AssetOptions::folder());
+    let writing_fonts = asset!("/assets/writing-fonts", AssetOptions::folder());
     let modal_open = use_memo(move || picker_open() || opening() || command_open());
     let commands_blocked =
         move || *picker_open.peek() || *opening.peek() || pending.peek().is_some() || *busy.peek();
@@ -189,7 +192,7 @@ fn App() -> Element {
                 appearance.set(option);
             } else if let Some(width) = commands::width_for_id(id) {
                 page_width.set(width);
-            } else {
+            } else if !writing_style::apply_style_command(id, writing_style) {
                 let in_notebook = opened.peek().is_some();
                 match id {
                     commands::ZOOM_IN => set_zoom.call(zoom::ZoomAction::In),
@@ -224,11 +227,13 @@ fn App() -> Element {
     rsx! {
         document::Stylesheet { href: asset!("/assets/app.css") }
         document::Stylesheet { href: "{mono}/fonts.css" }
+        document::Stylesheet { href: "{writing_fonts}/fonts.css" }
         if let Some((key, notebook)) = opened().map(|notebook| (format!("{:?}", notebook.root()), notebook)) {
             workspace::Workspace {
                 key: "{key}",
                 opened: notebook, page_width, zoom: scale,
                 edit_in_preview: edit_in_preview(),
+                writing_style: writing_style(),
                 busy, pending, error, modal_open, palette_command, page_actions,
                 on_switch: move |notebook| {
                     page_actions.set(commands::PageActions::default());
@@ -275,6 +280,7 @@ fn App() -> Element {
                 commands: {
                     let mut commands = commands::notebook_commands(opened.read().is_some(), page_actions());
                     commands.extend(commands::settings(appearance(), page_width(), edit_in_preview()));
+                    commands.extend(writing_style::style_commands(writing_style()));
                     commands
                 },
                 on_close: palette_closed,

@@ -135,6 +135,7 @@
 }
 
 .workspace-content > .note-editor {
+    font-family: var(--writing-font);
     width: min(100%, var(--editor-page-width, 60ch));
 }
 
@@ -191,7 +192,7 @@
     flex: 1;
     min-height: 0;
     font: inherit;
-    line-height: 1.7;
+    line-height: var(--writing-line-height);
 }
 
 .note-input {

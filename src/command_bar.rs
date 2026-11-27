@@ -8,6 +8,7 @@ use crate::modal::run_dialog;
 pub(crate) struct Command {
     pub(crate) id: &'static str,
     label: &'static str,
+    value: &'static str,
     icon: &'static str,
     shortcut: &'static str,
     keywords: &'static str,
@@ -26,6 +27,7 @@ impl Command {
         Self {
             id,
             label,
+            value: "",
             icon,
             shortcut,
             keywords,
@@ -39,6 +41,19 @@ impl Command {
         self.current = current;
         self
     }
+
+    pub(crate) const fn setting_value(mut self, value: &'static str, current: bool) -> Self {
+        self.value = value;
+        self.setting(current)
+    }
+
+    fn title(self) -> String {
+        if self.value.is_empty() {
+            self.label.to_owned()
+        } else {
+            format!("{} · {}", self.label, self.value)
+        }
+    }
 }
 
 fn matching_commands(commands: &[Command], query: &str) -> Vec<Command> {
@@ -48,9 +63,10 @@ fn matching_commands(commands: &[Command], query: &str) -> Vec<Command> {
         .copied()
         .filter(|command| {
             let label = command.label.to_lowercase();
-            query
-                .split_whitespace()
-                .all(|word| label.contains(word) || command.keywords.contains(word))
+            let value = command.value.to_lowercase();
+            query.split_whitespace().all(|word| {
+                label.contains(word) || value.contains(word) || command.keywords.contains(word)
+            })
         })
         .collect()
 }
@@ -150,7 +166,7 @@ pub(crate) fn CommandBar(
                             aria_current: command.current.then_some("true"),
                             onclick: move |_| choose(command),
                             img { src: "{icons}/{command.icon}.svg", alt: "", width: "18", height: "18" }
-                            span { "{command.label}" }
+                            span { "{command.title()}" }
                             if command.current {
                                 span { class: "command-current", aria_hidden: true, "✓" }
                             } else if !command.shortcut.is_empty() {
@@ -162,7 +178,7 @@ pub(crate) fn CommandBar(
             }
             if let Some(command) = selected {
                 span { class: "command-announcement", role: "status",
-                    "{command.label}"
+                    "{command.title()}"
                     if command.current { ", current setting" }
                 }
             } else {
@@ -281,6 +297,23 @@ mod tests {
             matching_commands(&settings, "reset zoom")[0].id,
             commands::RESET_ZOOM
         );
+    }
+
+    #[test]
+    fn finds_writing_settings_by_name_and_value() {
+        use crate::writing_style::WritingStyle;
+
+        let settings: Vec<_> = crate::writing_style::style_commands(WritingStyle::load()).collect();
+
+        for (query, id) in [
+            ("writing font jetbrains", "font-jetbrains"),
+            ("relaxed line height", "spacing-relaxed"),
+            ("code theme graphite", "code-theme-graphite"),
+        ] {
+            let matches = matching_commands(&settings, query);
+            assert_eq!(matches.len(), 1, "{query}");
+            assert_eq!(matches[0].id, id, "{query}");
+        }
     }
 
     #[test]

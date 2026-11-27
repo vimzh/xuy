@@ -22,6 +22,7 @@ use crate::notebook_menu;
 use crate::page_width::PageWidth;
 use crate::workspace_session;
 use crate::workspace_sidebar::{SidebarDivider, WorkspaceSidebar};
+use crate::writing_style::WritingStyle;
 
 mod open;
 
@@ -39,6 +40,7 @@ pub(crate) fn Workspace(
     page_width: Signal<PageWidth>,
     edit_in_preview: bool,
     zoom: f64,
+    writing_style: WritingStyle,
     mut busy: Signal<bool>,
     mut error: Signal<Option<String>>,
     mut pending: Signal<Option<OpenNotebook>>,
@@ -445,6 +447,9 @@ pub(crate) fn Workspace(
     let can_forward = !busy() && history.read().destination(1).is_some();
     let can_preview = (!busy() || saving()) && !modal_open() && selected.read().is_some();
     let columns = page_width().columns();
+    let font_family = writing_style.font();
+    let code_font = writing_style.code_font();
+    let line_height = writing_style.line_height();
     let folder = directory();
     let parent = folder
         .parent()
@@ -456,7 +461,8 @@ pub(crate) fn Workspace(
         main {
             class: "workspace",
             "data-sidebar-open": sidebar_open(),
-            style: "--editor-page-width: {columns}ch; --ui-zoom: {zoom}",
+            "data-code-theme": writing_style.code_theme(),
+            style: "--editor-page-width: {columns}ch; --writing-font: {font_family}; --writing-code-font: {code_font}; --writing-line-height: {line_height}; --ui-zoom: {zoom}",
             aria_busy: busy() && confirmation.read().is_none(),
             onkeydown: move |event| {
                 if event.key() == Key::Escape && !event.is_composing() {

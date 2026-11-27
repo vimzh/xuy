@@ -1,0 +1,17 @@
+@font-face {
+    font-family: "iA Writer Duo";
+    src: url("iAWriterDuoS-Regular.woff2") format("woff2");
+    font-weight: 400;
+}
+
+@font-face {
+    font-family: "iA Writer Quattro";
+    src: url("iAWriterQuattroS-Regular.woff2") format("woff2");
+    font-weight: 400;
+}
+
+@font-face {
+    font-family: "JetBrains Mono";
+    src: url("JetBrainsMono-Regular.woff2") format("woff2");
+    font-weight: 400;
+}
