@@ -12,9 +12,9 @@ pub(crate) enum PageWidth {
 
 impl PageWidth {
     const OPTIONS: [(Self, &'static str, u8); 3] = [
-        (Self::Narrow, "Narrow", 56),
-        (Self::Standard, "Standard", 60),
-        (Self::Wide, "Wide", 82),
+        (Self::Narrow, "Narrow", 60),
+        (Self::Standard, "Standard", 82),
+        (Self::Wide, "Wide", 104),
     ];
 
     pub(crate) fn columns(self) -> u8 {
