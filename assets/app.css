@@ -102,6 +102,11 @@ button {
 .landing nav button {
     border-radius: 4px;
     padding-inline: 10px;
+    font-size: 14px;
+}
+
+.landing h2 {
+    font-size: 12px;
 }
 
 .landing nav button:enabled:hover {
