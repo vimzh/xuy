@@ -65,10 +65,14 @@ impl Appearance {
         Self::System
     }
 
-    #[cfg(target_os = "macos")]
-    fn save(self) {
+    pub(crate) fn select(self, mut selected: Signal<Self>) {
+        if *selected.peek() == self {
+            return;
+        }
+        #[cfg(target_os = "macos")]
         NSUserDefaults::standardUserDefaults()
             .setInteger_forKey(self as isize, &NSString::from_str(THEME_KEY));
+        selected.set(self);
     }
 }
 
@@ -88,7 +92,7 @@ pub(crate) fn menu(initial: Appearance) -> Submenu {
 
 pub(crate) fn use_appearance() -> (Signal<Appearance>, Signal<bool>) {
     let window = use_window();
-    let mut selected = use_signal(Appearance::load);
+    let selected = use_signal(Appearance::load);
     let mut dark = use_signal(|| window.theme() == Theme::Dark);
     let window_id = window.id();
     use_wry_event_handler(move |event, _| {
@@ -104,15 +108,13 @@ pub(crate) fn use_appearance() -> (Signal<Appearance>, Signal<bool>) {
     });
     use_muda_event_handler(move |event| {
         if let Some(appearance) = appearance_for_id(&event.id().0) {
-            selected.set(appearance);
+            appearance.select(selected);
         }
     });
     use_effect(move || {
         let appearance = selected();
         window.set_theme(appearance.native());
         dark.set(window.theme() == Theme::Dark);
-        #[cfg(target_os = "macos")]
-        appearance.save();
         ITEMS.with_borrow(|items| {
             if let Some(items) = items {
                 for (item, (option, _, _)) in items.iter().zip(OPTIONS) {
@@ -131,7 +133,7 @@ pub(crate) fn appearance_for_id(id: &str) -> Option<Appearance> {
 }
 
 #[component]
-pub(crate) fn ThemeSelect(mut appearance: Signal<Appearance>) -> Element {
+pub(crate) fn ThemeSelect(appearance: Signal<Appearance>) -> Element {
     let selected = appearance();
     rsx! {
         label {
@@ -139,7 +141,7 @@ pub(crate) fn ThemeSelect(mut appearance: Signal<Appearance>) -> Element {
             select {
                 onchange: move |event| {
                     if let Some(option) = appearance_for_id(&event.value()) {
-                        appearance.set(option);
+                        option.select(appearance);
                     }
                 },
                 for (option, id, label) in OPTIONS {

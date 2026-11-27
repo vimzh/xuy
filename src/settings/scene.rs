@@ -144,9 +144,13 @@ pub(crate) fn apply_scene_command(
     dark: bool,
     mut preferences: Signal<ScenePreferences>,
 ) -> bool {
-    let mut next = *preferences.peek();
+    let current = *preferences.peek();
+    let mut next = current;
     if !next.select(dark, id) {
         return false;
+    }
+    if next == current {
+        return true;
     }
     preferences.set(next);
     #[cfg(target_os = "macos")]

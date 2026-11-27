@@ -55,6 +55,9 @@ impl FontPreference {
     }
 
     fn set(self, mut size: Signal<u8>, value: u8) {
+        if *size.peek() == value {
+            return;
+        }
         size.set(value);
         #[cfg(target_os = "macos")]
         NSUserDefaults::standardUserDefaults()

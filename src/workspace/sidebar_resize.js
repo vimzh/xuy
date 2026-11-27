@@ -10,8 +10,10 @@ let drag;
 let minimum;
 let maximum;
 let preferredWidth;
+let savedWidth;
 
 function applyWidth(width) {
+    if (preferredWidth === width) return;
     preferredWidth = width;
     // Keep the user preference separate from the workspace's reactive inline styles.
     document.documentElement.style.setProperty(`--sidebar-preferred-width`, `${width}px`);
@@ -23,15 +25,17 @@ try {
         const width = Number(saved);
         if (!Number.isSafeInteger(width) || width <= 0) throw new Error("Invalid saved width");
         applyWidth(width);
+        savedWidth = width;
     }
 } catch (error) {
     console.error("Could not restore the sidebar width:", error);
 }
 
 function saveWidth() {
-    if (preferredWidth === undefined) return;
+    if (preferredWidth === savedWidth) return;
     try {
         localStorage.setItem(widthKey, String(preferredWidth));
+        savedWidth = preferredWidth;
     } catch (error) {
         console.error("Could not save the sidebar width:", error);
     }

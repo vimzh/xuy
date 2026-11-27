@@ -50,6 +50,9 @@ impl PageWidth {
     }
 
     pub(crate) fn set(self, mut width: Signal<Self>) {
+        if *width.peek() == self {
+            return;
+        }
         #[cfg(target_os = "macos")]
         {
             let (_, id, _, _) = Self::OPTIONS[self as usize];

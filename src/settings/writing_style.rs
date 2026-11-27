@@ -125,6 +125,9 @@ impl WritingPreference {
     }
 
     fn set(self, mut style: Signal<WritingStyle>, choice: Choice) {
+        if style.peek().0[self as usize] == choice {
+            return;
+        }
         style.write().0[self as usize] = choice;
         #[cfg(target_os = "macos")]
         unsafe {

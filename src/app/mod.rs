@@ -26,7 +26,7 @@ enum ChooseFolder {
 
 #[component]
 pub(crate) fn App() -> Element {
-    let (mut appearance, dark) = theme::use_appearance();
+    let (appearance, dark) = theme::use_appearance();
     let scenes = use_signal(scene::ScenePreferences::load);
     let (zoom, set_zoom) = zoom::use_zoom_shortcuts();
     let scale = f64::from(zoom()) / 100.0;
@@ -209,7 +209,7 @@ pub(crate) fn App() -> Element {
             && !commands_blocked()
         {
             if let Some(option) = theme::appearance_for_id(id) {
-                appearance.set(option);
+                option.select(appearance);
             } else if let Some(width) = page_width::PageWidth::for_command(id) {
                 width.set(page_width);
             } else if !writing_style::apply_style_command(id, writing_style)
