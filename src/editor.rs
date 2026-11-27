@@ -45,6 +45,7 @@ pub(crate) fn Editor(
     draft: Signal<String>,
     dirty: Memo<bool>,
     view_mode: Signal<ViewMode>,
+    edit_in_preview: bool,
     paths: MarkdownPaths,
     preview_anchor: Signal<Option<String>>,
     on_preview_open: EventHandler<PreviewTarget>,
@@ -54,6 +55,7 @@ pub(crate) fn Editor(
     on_save: EventHandler<()>,
 ) -> Element {
     let mode = view_mode();
+    let editable = edit_in_preview && mode == ViewMode::Preview;
     use_effect(move || match view_mode() {
         ViewMode::Edit | ViewMode::Split => {
             document::eval("document.getElementById('note-source')?.focus({preventScroll: true})");
@@ -100,7 +102,14 @@ pub(crate) fn Editor(
                 },
             }
             if mode != ViewMode::Edit {
-                MarkdownPreview { draft, paths, anchor: preview_anchor, on_open: on_preview_open }
+                MarkdownPreview {
+                        key: "{editable}", draft, paths, editable, busy, anchor: preview_anchor,
+                        on_open: on_preview_open,
+                        on_edit: move |text| {
+                            on_edit.call(text);
+                            if !*chrome_hidden.peek() { chrome_hidden.set(true); }
+                        },
+                    }
             }
         }
     }
@@ -108,4 +117,11 @@ pub(crate) fn Editor(
 
 pub(crate) fn render_preview(source: &str, paths: Option<&MarkdownPaths>) -> String {
     markdown::render(source, paths, |_| false)
+}
+
+pub(crate) fn render_editable_preview(
+    source: &str,
+    paths: &MarkdownPaths,
+) -> (String, Vec<crate::preview_edit::EditableText>) {
+    markdown::render_editable(source, Some(paths), |_| false)
 }

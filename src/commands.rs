@@ -124,7 +124,11 @@ pub(crate) fn notebook_commands(in_notebook: bool, page: PageActions) -> Vec<Com
     commands
 }
 
-pub(crate) fn settings(appearance: Appearance, width: PageWidth) -> impl Iterator<Item = Command> {
+pub(crate) fn settings(
+    appearance: Appearance,
+    width: PageWidth,
+    edit_in_preview: bool,
+) -> impl Iterator<Item = Command> {
     let themes = crate::theme::OPTIONS.map(|(option, id, _)| {
         let label = match option {
             Appearance::System => "System Theme",
@@ -150,6 +154,18 @@ pub(crate) fn settings(appearance: Appearance, width: PageWidth) -> impl Iterato
         )
         .setting(width == option)
     });
+    let preview_editing = Command::new(
+        notebook_menu::TOGGLE_PREVIEW_EDITING,
+        if edit_in_preview {
+            "Disable Editing in Preview"
+        } else {
+            "Enable Editing in Preview"
+        },
+        "view",
+        "",
+        "edit rendered editable read-only toggle",
+    )
+    .setting(false);
     let zoom = [
         Command::new(
             ZOOM_IN,
@@ -176,6 +192,7 @@ pub(crate) fn settings(appearance: Appearance, width: PageWidth) -> impl Iterato
     themes
         .into_iter()
         .chain(widths)
+        .chain([preview_editing])
         .chain(zoom.map(|command| command.setting(false)))
 }
 

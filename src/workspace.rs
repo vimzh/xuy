@@ -37,6 +37,7 @@ enum NewEntry {
 pub(crate) fn Workspace(
     opened: OpenNotebook,
     page_width: Signal<PageWidth>,
+    edit_in_preview: bool,
     zoom: f64,
     mut busy: Signal<bool>,
     mut error: Signal<Option<String>>,
@@ -509,7 +510,7 @@ pub(crate) fn Workspace(
                     }
                     if let Some(path) = selected() {
                         Editor { key: "{path:?}",
-                            draft, dirty, view_mode, chrome_hidden, busy: (busy() && !saving()) || modal_open(),
+                            draft, dirty, view_mode, edit_in_preview, chrome_hidden, busy: (busy() && !saving()) || modal_open(),
                             paths: MarkdownPaths::new(root.peek().clone(), path), preview_anchor,
                             on_preview_open: open_preview_link,
                             on_edit: move |text| {

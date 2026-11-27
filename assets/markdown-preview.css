@@ -38,3 +38,17 @@
 .markdown-preview .markdown-alert-title {
     font-weight: 600;
 }
+
+.markdown-preview [data-md-text] {
+    white-space: pre-wrap;
+}
+
+.markdown-preview [data-md-text]:empty {
+    display: inline-block;
+    min-inline-size: 1ch;
+}
+
+.markdown-preview [data-md-text]:focus-visible {
+    outline: 1px solid var(--focus);
+    outline-offset: 2px;
+}

@@ -8,6 +8,7 @@ use pulldown_cmark::utils::TextMergeWithOffset;
 use pulldown_cmark::{CowStr, Event, LinkType, Options, Parser, Tag, TagEnd, html};
 
 use crate::markdown_paths::MarkdownPaths;
+use crate::preview_edit::EditableText;
 
 pub(crate) const OPTIONS: Options = Options::ENABLE_TABLES
     .union(Options::ENABLE_STRIKETHROUGH)
@@ -23,7 +24,33 @@ const WIKI_LINK: &str = "#xuy-wiki:";
 pub(crate) fn render(
     source: &str,
     paths: Option<&MarkdownPaths>,
+    allow_inline: impl FnMut(usize) -> bool,
+) -> String {
+    render_inner(source, paths, allow_inline, None)
+}
+
+pub(crate) fn render_editable(
+    source: &str,
+    paths: Option<&MarkdownPaths>,
+    allow_inline: impl FnMut(usize) -> bool,
+) -> (String, Vec<EditableText>) {
+    let mut editable = Vec::new();
+    let mut html = render_inner(source, paths, allow_inline, Some(&mut editable));
+    if html.is_empty() && source.trim().is_empty() {
+        html.push_str("<p>");
+        let range = 0..source.len();
+        let span = editable_span("", range.clone(), range, true, &mut editable);
+        html.push_str(&span);
+        html.push_str("</p>");
+    }
+    (html, editable)
+}
+
+fn render_inner(
+    source: &str,
+    paths: Option<&MarkdownPaths>,
     mut allow_inline: impl FnMut(usize) -> bool,
+    mut editable: Option<&mut Vec<EditableText>>,
 ) -> String {
     let mut input = TextMergeWithOffset::new(Parser::new_ext(source, OPTIONS).into_offset_iter());
     let mut finder = LinkFinder::new();
@@ -35,7 +62,38 @@ pub(crate) fn render(
     let mut in_link = false;
     let mut emit_link = false;
 
+    let mut depth = 0;
+    let mut paragraph = None::<Range<usize>>;
+    let mut formats = Vec::new();
+
     while let Some((event, range)) = input.next() {
+        if editable.is_some() {
+            match &event {
+                Event::Start(Tag::Paragraph) if depth == 0 => {
+                    paragraph = Some(range.clone());
+                    depth += 1;
+                }
+                Event::Start(Tag::Image { .. }) => {}
+                Event::Start(Tag::Emphasis | Tag::Strong | Tag::Strikethrough) => {
+                    formats.push(range.clone());
+                    depth += 1;
+                }
+                Event::Start(_) => depth += 1,
+                Event::End(tag) => {
+                    if matches!(
+                        tag,
+                        TagEnd::Emphasis | TagEnd::Strong | TagEnd::Strikethrough
+                    ) {
+                        formats.pop();
+                    }
+                    depth -= 1;
+                    if depth == 0 {
+                        paragraph = None;
+                    }
+                }
+                _ => {}
+            }
+        }
         let allowed = matches!(event, Event::InlineHtml(_)) && allow_inline(range.start);
         if !allowed && let Some((_, label)) = &mut heading {
             append_plain_text(label, &event);
@@ -111,7 +169,16 @@ pub(crate) fn render(
             Event::InlineHtml(text) if !allowed => Event::Text(text),
             Event::Html(text) => Event::Text(text),
             Event::Text(text) if !in_code && !in_link => {
-                push_autolinks(&mut events, &finder, text);
+                let edit = editable.as_deref_mut().map(|runs| (range, runs));
+                push_autolinks(
+                    &mut events,
+                    &finder,
+                    text,
+                    source,
+                    edit,
+                    paragraph.as_ref(),
+                    &formats,
+                );
                 continue;
             }
             event => event,
@@ -171,7 +238,59 @@ fn link_destination(link_type: LinkType, destination: CowStr<'_>) -> Option<CowS
     )
 }
 
-fn push_autolinks<'a>(events: &mut Vec<Event<'a>>, finder: &LinkFinder, text: CowStr<'a>) {
+fn push_autolinks<'a>(
+    events: &mut Vec<Event<'a>>,
+    finder: &LinkFinder,
+    text: CowStr<'a>,
+    source: &str,
+    mut edit: Option<(Range<usize>, &mut Vec<EditableText>)>,
+    paragraph: Option<&Range<usize>>,
+    formats: &[Range<usize>],
+) {
+    let preserve_original = edit.is_none();
+    let mut push_text = |events: &mut Vec<Event<'a>>, bytes: Range<usize>| {
+        let value = &text[bytes.clone()];
+        let range_for = |range: &Range<usize>| {
+            if bytes.start == 0 && bytes.end == text.len() {
+                Some(range.clone())
+            } else if source.get(range.clone()) == Some(text.as_ref()) {
+                Some(range.start + bytes.start..range.start + bytes.end)
+            } else {
+                None
+            }
+        };
+        if let Some((original, runs)) = &mut edit
+            && let Some(range) = range_for(original)
+        {
+            let multiline = paragraph.is_some_and(|p| {
+                range.start == p.start
+                    && source
+                        .get(range.end..p.end)
+                        .is_some_and(|rest| rest.trim().is_empty())
+            });
+            let enclosing = formats
+                .iter()
+                .rev()
+                .take_while(|format| {
+                    format.start < range.start
+                        && range.end < format.end
+                        && [
+                            &source[format.start..range.start],
+                            &source[range.end..format.end],
+                        ]
+                        .into_iter()
+                        .all(|part| part.bytes().all(|byte| matches!(byte, b'*' | b'_' | b'~')))
+                })
+                .last()
+                .cloned()
+                .unwrap_or_else(|| range.clone());
+            events.push(Event::InlineHtml(
+                editable_span(value, range, enclosing, multiline, runs).into(),
+            ));
+        } else {
+            events.push(Event::Text(value.to_owned().into()));
+        }
+    };
     let mut written = 0;
     for link in finder.links(&text) {
         let label = link.as_str();
@@ -184,7 +303,7 @@ fn push_autolinks<'a>(events: &mut Vec<Event<'a>>, finder: &LinkFinder, text: Co
             _ => continue,
         };
         if written < link.start() {
-            events.push(Event::Text(text[written..link.start()].to_owned().into()));
+            push_text(events, written..link.start());
         }
         events.extend([
             Event::Start(Tag::Link {
@@ -198,11 +317,28 @@ fn push_autolinks<'a>(events: &mut Vec<Event<'a>>, finder: &LinkFinder, text: Co
         ]);
         written = link.end();
     }
-    if written == 0 {
+    if written == 0 && preserve_original {
         events.push(Event::Text(text));
     } else if written < text.len() {
-        events.push(Event::Text(text[written..].to_owned().into()));
+        push_text(events, written..text.len());
     }
+}
+
+fn editable_span(
+    text: &str,
+    range: Range<usize>,
+    enclosing: Range<usize>,
+    multiline: bool,
+    editable: &mut Vec<EditableText>,
+) -> String {
+    let index = editable.len();
+    editable.push(EditableText::new(range, enclosing, text, multiline));
+    let mut html = format!(
+        r#"<span data-md-text="{index}" contenteditable="plaintext-only" role="textbox" aria-label="Markdown text" aria-multiline="{multiline}">"#
+    );
+    html::push_html(&mut html, std::iter::once(Event::Text(text.into())));
+    html.push_str("</span>");
+    html
 }
 
 fn append_plain_text(output: &mut String, event: &Event<'_>) {
@@ -306,7 +442,28 @@ fn footnote_id(name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::render;
+    use super::{render, render_editable};
+
+    #[test]
+    fn edit_ranges_preserve_nested_formatting_and_reference_links() {
+        use crate::preview_edit::PreviewEdits;
+
+        let source = "**_Bold_** with [label][id].\n\n[id]: https://example.org";
+        let (html, runs) = render_editable(source, None, |_| false);
+        assert!(html.contains("<strong><em><span data-md-text=\"0\""));
+        assert!(html.contains(">label</a>"));
+        let mut edit = PreviewEdits::new(0, source, &runs);
+        edit.replace(source, &runs, 0, "Changed").unwrap();
+        assert_eq!(
+            edit.draft,
+            "**_Changed_** with [label][id].\n\n[id]: https://example.org"
+        );
+        edit.replace(source, &runs, 0, "").unwrap();
+        assert_eq!(
+            edit.draft,
+            " with [label][id].\n\n[id]: https://example.org"
+        );
+    }
 
     fn preview(source: &str) -> String {
         render(source, None, |_| false)

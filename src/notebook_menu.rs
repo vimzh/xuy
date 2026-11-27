@@ -5,6 +5,9 @@ use std::cell::RefCell;
 use dioxus::desktop::muda::accelerator::{Accelerator, Code, Modifiers};
 use dioxus::desktop::muda::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 
+#[cfg(target_os = "macos")]
+use objc2_foundation::{NSString, NSUserDefaults};
+
 use crate::editor::ViewMode;
 
 pub(crate) const HOME: &str = "xuy-home";
@@ -12,6 +15,7 @@ pub(crate) const COMMAND_BAR: &str = "xuy-command-bar";
 pub(crate) const TOGGLE_SIDEBAR: &str = "xuy-toggle-sidebar";
 pub(crate) const TOGGLE_PREVIEW: &str = "xuy-toggle-preview";
 pub(crate) const TOGGLE_SPLIT: &str = "xuy-toggle-split";
+pub(crate) const TOGGLE_PREVIEW_EDITING: &str = "xuy-toggle-preview-editing";
 pub(crate) const PREVIEW_SHORTCUT: &str = "⇧⌘P";
 pub(crate) const SAVE: &str = "xuy-save";
 
@@ -20,6 +24,9 @@ pub(crate) const NEW_FOLDER: &str = "xuy-new-folder";
 pub(crate) const NEW_NOTEBOOK: &str = "xuy-new-notebook";
 pub(crate) const OPEN_FOLDER: &str = "xuy-open-folder";
 pub(crate) const NOTEBOOKS: &str = "xuy-notebooks";
+
+#[cfg(target_os = "macos")]
+const PREVIEW_EDITING_KEY: &str = "xuy.edit-in-preview";
 
 #[cfg(target_os = "macos")]
 pub(crate) fn show_sidebar(window: &dioxus::desktop::tao::window::Window) {
@@ -41,6 +48,7 @@ struct Commands {
     toggle_sidebar: MenuItem,
     toggle_preview: MenuItem,
     toggle_split: CheckMenuItem,
+    edit_in_preview: CheckMenuItem,
     save: MenuItem,
 }
 
@@ -112,6 +120,13 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
         Code::KeyP,
     );
     let toggle_split = CheckMenuItem::with_id(TOGGLE_SPLIT, "Side by Side", false, false, None);
+    let edit_in_preview = CheckMenuItem::with_id(
+        TOGGLE_PREVIEW_EDITING,
+        "Edit in Preview",
+        true,
+        load_preview_editing(),
+        None,
+    );
     let new_note = command(NEW_NOTE, "New Note…", true, Modifiers::SUPER, Code::KeyN);
     let new_folder = command(
         NEW_FOLDER,
@@ -150,6 +165,7 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
             &toggle_sidebar,
             &toggle_preview,
             &toggle_split,
+            &edit_in_preview,
             &save,
         ],
     )
@@ -187,9 +203,31 @@ pub(crate) fn build(appearance: crate::theme::Appearance) -> Menu {
         toggle_sidebar,
         toggle_preview,
         toggle_split,
+        edit_in_preview,
         save,
     }));
     menu
+}
+
+pub(crate) fn load_preview_editing() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        NSUserDefaults::standardUserDefaults().boolForKey(&NSString::from_str(PREVIEW_EDITING_KEY))
+    }
+    #[cfg(not(target_os = "macos"))]
+    false
+}
+
+pub(crate) fn set_preview_editing(enabled: bool) {
+    #[cfg(target_os = "macos")]
+    NSUserDefaults::standardUserDefaults()
+        .setBool_forKey(enabled, &NSString::from_str(PREVIEW_EDITING_KEY));
+
+    COMMANDS.with_borrow(|commands| {
+        if let Some(commands) = commands {
+            commands.edit_in_preview.set_checked(enabled);
+        }
+    });
 }
 
 pub(crate) fn update(open: bool, can_view: bool, view_mode: ViewMode, dirty: bool, busy: bool) {

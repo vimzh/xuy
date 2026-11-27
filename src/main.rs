@@ -13,6 +13,7 @@ mod notebook_index;
 mod notebook_menu;
 mod notebook_picker;
 mod page_width;
+mod preview_edit;
 mod theme;
 mod workspace;
 mod workspace_session;
@@ -58,6 +59,7 @@ fn App() -> Element {
     let mut command_open = use_signal(|| false);
     let busy = use_signal(|| false);
     let mut page_width = use_signal(page_width::PageWidth::default);
+    let mut edit_in_preview = use_signal(notebook_menu::load_preview_editing);
     let mut picker_open = use_signal(|| false);
     let saved = use_signal(notebook_picker::load);
     let mut opening = use_signal(|| true);
@@ -144,6 +146,11 @@ fn App() -> Element {
         opening.set(false);
     };
     let mut run_app_command = move |id: &str| match id {
+        notebook_menu::TOGGLE_PREVIEW_EDITING => {
+            let enabled = !*edit_in_preview.peek();
+            notebook_menu::set_preview_editing(enabled);
+            edit_in_preview.set(enabled);
+        }
         notebook_menu::NOTEBOOKS => {
             error.set(None);
             picker_open.set(true);
@@ -163,7 +170,9 @@ fn App() -> Element {
         let id = event.id().0.as_str();
         if id == notebook_menu::COMMAND_BAR && *command_open.peek() {
             command_bar::close();
-        } else if !commands_blocked() && !*command_open.peek() {
+        } else if id == notebook_menu::TOGGLE_PREVIEW_EDITING
+            || (!commands_blocked() && !*command_open.peek())
+        {
             if id == notebook_menu::COMMAND_BAR {
                 command_open.set(true);
             } else {
@@ -218,6 +227,7 @@ fn App() -> Element {
             workspace::Workspace {
                 key: "{key}",
                 opened: notebook, page_width, zoom: scale,
+                edit_in_preview: edit_in_preview(),
                 busy, pending, error, modal_open, palette_command, page_actions,
                 on_switch: move |notebook| {
                     page_actions.set(commands::PageActions::default());
@@ -263,7 +273,7 @@ fn App() -> Element {
             command_bar::CommandBar {
                 commands: {
                     let mut commands = commands::notebook_commands(opened.read().is_some(), page_actions());
-                    commands.extend(commands::settings(appearance(), page_width()));
+                    commands.extend(commands::settings(appearance(), page_width(), edit_in_preview()));
                     commands
                 },
                 on_close: palette_closed,

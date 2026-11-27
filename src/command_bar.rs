@@ -268,7 +268,8 @@ mod tests {
     fn searches_settings_and_marks_the_active_values() {
         use crate::{page_width::PageWidth, theme::Appearance};
 
-        let settings: Vec<_> = commands::settings(Appearance::Dark, PageWidth::Wide).collect();
+        let settings: Vec<_> =
+            commands::settings(Appearance::Dark, PageWidth::Wide, false).collect();
         let dark = matching_commands(&settings, "appearance dark")[0];
         assert!(dark.current);
         assert!(crate::theme::appearance_for_id(dark.id) == Some(Appearance::Dark));
@@ -280,5 +281,22 @@ mod tests {
             matching_commands(&settings, "reset zoom")[0].id,
             commands::RESET_ZOOM
         );
+    }
+
+    #[test]
+    fn preview_editing_command_reflects_current_state() {
+        use crate::{page_width::PageWidth, theme::Appearance};
+
+        for (enabled, label) in [
+            (false, "Enable Editing in Preview"),
+            (true, "Disable Editing in Preview"),
+        ] {
+            let settings: Vec<_> =
+                commands::settings(Appearance::System, PageWidth::Standard, enabled).collect();
+            let matching = matching_commands(&settings, "edit in preview");
+            assert_eq!(matching.len(), 1);
+            assert_eq!(matching[0].id, notebook_menu::TOGGLE_PREVIEW_EDITING);
+            assert_eq!(matching[0].label, label);
+        }
     }
 }
