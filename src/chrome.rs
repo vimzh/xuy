@@ -43,12 +43,13 @@ pub(crate) fn NotebookChrome(
     } else {
         "Show sidebar"
     };
+    let chrome_hidden = hidden();
 
     rsx! {
         document::Stylesheet { href: asset!("/assets/chrome.css") }
         header { class: "notebook-chrome",
             div { class: "chrome-strip",
-                if hidden() {
+                if chrome_hidden {
                     div { class: "chrome-reveal", onmousemove: move |_| hidden.set(false) }
                 } else {
                     div { class: "chrome-drag", onmousedown: move |event| {
@@ -56,7 +57,9 @@ pub(crate) fn NotebookChrome(
                             window.drag();
                         }
                     } }
-                    span { class: "chrome-sidebar-rule", aria_hidden: true }
+                }
+                span { class: "chrome-sidebar-rule", aria_hidden: true }
+                if !chrome_hidden {
                     div { class: "chrome-left",
                         button {
                             r#type: "button",
