@@ -1,31 +1,19 @@
 .workspace {
+    --sidebar-width: clamp(264px, 25%, 300px);
+    --workspace-rule: #e3e3e3;
     position: fixed;
     inset: 0;
     display: grid;
-    grid-template-rows: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
     background: #fff;
     text-align: left;
 }
 
-.folder-toolbar,
-.editor-toolbar,
-.editor-actions,
 .unsaved-choice,
 .new-note {
     display: flex;
     align-items: center;
     gap: 12px;
-}
-
-.note-title {
-    min-width: 0;
-    margin: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 16px;
-    line-height: 1.5;
-    letter-spacing: normal;
 }
 
 .workspace button {
@@ -40,8 +28,7 @@
     cursor: pointer;
 }
 
-.workspace button:enabled:hover,
-.folder-entry.current-note {
+.workspace button:enabled:hover {
     background: #f3f3f3;
 }
 
@@ -52,52 +39,22 @@
 .workspace-body {
     min-height: 0;
     display: grid;
-    grid-template-columns: minmax(160px, 22%) minmax(0, 1fr);
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
 }
 
-.folder-list {
+.workspace-sidebar {
     min-width: 0;
-    padding: 16px 12px;
-    border-right: 1px solid #e5e5e5;
-    overflow: auto;
+    min-height: 0;
+    display: grid;
 }
 
-.folder-toolbar {
-    flex-wrap: wrap;
-    gap: 6px;
+.workspace-sidebar[hidden] {
+    display: none;
 }
 
-.folder-path {
-    margin: 18px 8px 8px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.folder-list ul {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.workspace .folder-entry {
-    display: block;
-    width: 100%;
-    border-color: transparent;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.folder-empty,
-.workspace-message,
-.note-status {
-    color: #555;
-    font-size: 13px;
-}
-
-.folder-empty {
-    padding-inline: 8px;
+.workspace-body.sidebar-closed {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
 }
 
 .workspace-content,
@@ -109,12 +66,24 @@
 }
 
 .workspace-content {
-    padding: 16px 20px;
+    min-width: 0;
+    padding: clamp(22px, 5vw, 48px) clamp(20px, 5vw, 56px);
     overflow: auto;
 }
 
+.workspace-content > * {
+    box-sizing: border-box;
+    width: min(100%, 66ch);
+    margin-inline: auto;
+}
+
+.workspace-message {
+    color: #555;
+    font-size: 13px;
+}
+
 .workspace-error {
-    margin: 0 0 14px;
+    margin-block: 0 14px;
     padding: 8px 10px;
     border: 1px solid #ccc;
     font-size: 13px;
@@ -127,9 +96,10 @@
     margin-bottom: 16px;
 }
 
-.new-note input,
-.note-input {
+.new-note input {
+    box-sizing: border-box;
     min-width: 0;
+    width: min(100%, 18rem);
     padding: 6px 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -138,35 +108,34 @@
     font: inherit;
 }
 
-.new-note input {
-    width: min(100%, 18rem);
-}
-
-.editor-toolbar,
-.editor-actions {
-    flex-wrap: wrap;
-    justify-content: space-between;
-}
-
-.editor-toolbar {
-    margin-bottom: 14px;
+.note-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
 }
 
 .note-input,
 .markdown-preview {
     flex: 1;
     min-height: 0;
+    font: inherit;
+    line-height: 1.7;
 }
 
 .note-input {
-    padding: 12px;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: inherit;
     resize: none;
 }
 
 .markdown-preview {
     overflow: auto;
     overflow-wrap: anywhere;
-    line-height: 1.65;
 }
 
 .markdown-preview :is(h1, h2, h3) {
@@ -178,6 +147,10 @@
 
 .markdown-preview h1 { font-size: 1.6em; }
 .markdown-preview h2 { font-size: 1.35em; }
+
+.markdown-preview > div > :first-child {
+    margin-top: 0;
+}
 
 .markdown-preview pre {
     padding: 12px;
@@ -210,9 +183,12 @@
         grid-template-rows: auto minmax(0, 1fr);
     }
 
-    .folder-list {
+    .workspace-sidebar {
         max-height: 25vh;
+    }
+
+    .workspace-sidebar .notebook-sidebar {
         border-right: 0;
-        border-bottom: 1px solid #e5e5e5;
+        border-bottom: 1px solid var(--workspace-rule);
     }
 }

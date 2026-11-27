@@ -3,12 +3,17 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-use dioxus::prelude::*;
+use dioxus::desktop::use_muda_event_handler;
+use dioxus::prelude::{dioxus_core::use_drop, *};
 use rfd::AsyncFileDialog;
 use tokio::sync::oneshot;
 
+use crate::chrome::NotebookChrome;
 use crate::editor::Editor;
+use crate::note_history::NoteHistory;
 use crate::notebook::{self, Entry};
+use crate::notebook_menu;
+use crate::workspace_sidebar::WorkspaceSidebar;
 
 #[derive(Clone, PartialEq)]
 pub(crate) struct OpenNotebook {
@@ -43,11 +48,15 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
     let mut draft = use_signal(String::new);
     let mut saved = use_signal(String::new);
     let mut preview = use_signal(|| true);
+    let mut sidebar_open = use_signal(|| true);
+    let mut chrome_hidden = use_signal(|| false);
+    let mut history = use_signal(NoteHistory::default);
     let mut naming = use_signal(|| opened.start_new);
     let mut name = use_signal(String::new);
     let mut busy = use_signal(|| false);
     let mut error = use_signal(|| None::<String>);
     let confirmation = use_signal(|| None::<oneshot::Sender<bool>>);
+    let dirty = use_memo(move || *draft.read() != *saved.read());
 
     let resolve_confirmation = move |discard| {
         let mut confirmation = confirmation;
@@ -56,7 +65,7 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
         }
     };
 
-    let browse = move |entry: Entry| async move {
+    let browse = move |entry: Entry, history_index: Option<usize>| async move {
         if *busy.peek() || selected.peek().as_ref() == Some(&entry.path) {
             return;
         }
@@ -75,18 +84,57 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
             }
         } else if allow_leave(draft, saved, confirmation).await {
             let file = path.clone();
-            match on_disk(move || notebook::read(&root, &file)).await {
-                Ok(text) => {
+            let current = directory.peek().clone();
+            let note = on_disk(move || {
+                let text = notebook::read(&root, &file)?;
+                let parent = file.parent().expect("a notebook note has a parent");
+                let folder = if parent == current {
+                    None
+                } else {
+                    Some((parent.to_owned(), notebook::list(&root, parent)?))
+                };
+                Ok((text, folder))
+            })
+            .await;
+            match note {
+                Ok((text, folder)) => {
+                    if let Some((parent, children)) = folder {
+                        directory.set(parent);
+                        entries.set(children);
+                    }
                     saved.set(text.clone());
                     draft.set(text);
+                    if let Some(index) = history_index {
+                        history.write().arrive(index);
+                    } else {
+                        history.write().visit(&path);
+                    }
                     selected.set(Some(path));
                     preview.set(true);
+                    chrome_hidden.set(false);
                     naming.set(false);
                 }
                 Err(failure) => error.set(Some(failure.to_string())),
             }
         }
         busy.set(false);
+    };
+
+    let move_history = move |offset| async move {
+        let destination = history
+            .peek()
+            .destination(offset)
+            .map(|(index, path)| (index, path.to_owned()));
+        if let Some((index, path)) = destination {
+            browse(
+                Entry {
+                    path,
+                    is_dir: false,
+                },
+                Some(index),
+            )
+            .await;
+        }
     };
 
     let create = move |event: FormEvent| {
@@ -114,8 +162,10 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
                         }
                         saved.set(String::new());
                         draft.set(String::new());
+                        history.write().visit(&path);
                         selected.set(Some(path));
                         preview.set(false);
+                        chrome_hidden.set(false);
                         naming.set(false);
                     }
                     Err(failure) => error.set(Some(failure.to_string())),
@@ -143,30 +193,91 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
         })
         .await;
         match result {
-            Ok(text) => saved.set(text),
+            Ok(text) => {
+                saved.set(text);
+                // Refresh the saved note's date and excerpt.
+                drop(entries.write());
+            }
             Err(failure) => error.set(Some(failure.to_string())),
         }
         busy.set(false);
     };
 
+    let go_home = move || async move {
+        if *busy.peek() {
+            return;
+        }
+        busy.set(true);
+        let confirmed = allow_leave(draft, saved, confirmation).await;
+        busy.set(false);
+        if confirmed {
+            on_home.call(());
+        }
+    };
+    use_muda_event_handler(move |event| match event.id().0.as_str() {
+        notebook_menu::HOME => {
+            spawn(go_home());
+        }
+        notebook_menu::TOGGLE_PREVIEW if !*busy.peek() && selected.peek().is_some() => {
+            let next = !*preview.peek();
+            preview.set(next);
+            chrome_hidden.set(false);
+        }
+        notebook_menu::SAVE => {
+            spawn(save(()));
+        }
+        _ => {}
+    });
+    use_effect(move || {
+        notebook_menu::update(true, selected.read().is_some(), preview(), dirty(), busy())
+    });
+    use_drop(|| notebook_menu::update(false, false, false, false, false));
+
+    let filename = match selected.read().as_ref() {
+        Some(path) if dirty() => format!("{} •", display_name(path)),
+        Some(path) => display_name(path),
+        None if naming() => "Untitled".to_owned(),
+        None => String::new(),
+    };
+    let can_back = !busy() && history.read().destination(-1).is_some();
+    let can_forward = !busy() && history.read().destination(1).is_some();
+
     rsx! {
         document::Stylesheet { href: asset!("/assets/workspace.css") }
-        main { class: "workspace", aria_busy: busy() && confirmation.read().is_none(),
-            div { class: "workspace-body",
-                FolderList {
-                    root: root.peek().clone(),
-                    directory: directory(),
-                    entries,
-                    selected: selected(),
-                    busy: busy(),
-                    on_home: move |_| async move {
-                        if *busy.peek() { return; }
-                        busy.set(true);
-                        let confirmed = allow_leave(draft, saved, confirmation).await;
-                        busy.set(false);
-                        if confirmed { on_home.call(()); }
+        main {
+            class: "workspace",
+            aria_busy: busy() && confirmation.read().is_none(),
+            onkeydown: move |event| {
+                if event.key() == Key::Escape && !event.is_composing() {
+                    if confirmation.peek().is_some() {
+                        event.prevent_default();
+                        resolve_confirmation(false);
+                    }
+                    if *chrome_hidden.peek() {
+                        event.prevent_default();
+                        chrome_hidden.set(false);
+                    }
+                }
+            },
+            NotebookChrome {
+                filename, hidden: chrome_hidden, sidebar_open: sidebar_open(), can_back, can_forward,
+                on_toggle: move |_| {
+                    let next = !*sidebar_open.peek();
+                    sidebar_open.set(next);
+                },
+                on_back: move |_| move_history(-1),
+                on_forward: move |_| move_history(1),
+            }
+            div { class: if sidebar_open() { "workspace-body" } else { "workspace-body sidebar-closed" },
+                div { id: "workspace-sidebar", class: "workspace-sidebar", hidden: !sidebar_open(),
+                    WorkspaceSidebar {
+                        root: root.peek().clone(),
+                        directory: directory(),
+                        entries,
+                        selected: selected(),
+                        busy: busy(),
+                        on_browse: move |entry| browse(entry, None),
                     },
-                    on_browse: move |entry| async move { browse(entry).await },
                 }
                 div { class: "workspace-content",
                     if let Some(message) = error() {
@@ -175,7 +286,11 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
                     if confirmation.read().is_some() {
                         div { class: "unsaved-choice",
                             span { role: "alert", "Discard unsaved changes?" }
-                            button { onclick: move |_| resolve_confirmation(false), "Keep editing" }
+                            button {
+                                onmounted: move |event| async move { let _ = event.set_focus(true).await; },
+                                onclick: move |_| resolve_confirmation(false),
+                                "Keep editing"
+                            }
                             button { onclick: move |_| resolve_confirmation(true), "Discard changes" }
                         }
                     }
@@ -196,63 +311,10 @@ pub(crate) fn Workspace(opened: OpenNotebook, on_home: EventHandler<()>) -> Elem
                     }
                     if let Some(path) = selected() {
                         Editor { key: "{path:?}",
-                            name: display_name(&path), draft, saved, preview, busy: busy(), on_save: save,
+                            draft, dirty, preview, chrome_hidden, busy: busy(), on_save: save,
                         }
                     } else if !naming() {
                         p { class: "workspace-message", "Select a Markdown note." }
-                    }
-                }
-            }
-        }
-    }
-}
-
-#[component]
-fn FolderList(
-    root: PathBuf,
-    directory: PathBuf,
-    entries: Signal<Vec<Entry>>,
-    selected: Option<PathBuf>,
-    busy: bool,
-    on_home: EventHandler<()>,
-    on_browse: EventHandler<Entry>,
-) -> Element {
-    let parent = (directory != root)
-        .then(|| directory.parent().map(Path::to_owned))
-        .flatten();
-    let current = directory
-        .strip_prefix(&root)
-        .expect("directory must be in the notebook");
-    let location = if current.as_os_str().is_empty() {
-        "/".to_owned()
-    } else {
-        format!("/{}", current.display())
-    };
-
-    rsx! {
-        aside { class: "folder-list", aria_label: "Notebook files",
-            div { class: "folder-toolbar",
-                button { disabled: busy, onclick: move |_| on_home.call(()), "Home" }
-                if let Some(parent) = parent {
-                    button { disabled: busy, onclick: move |_| on_browse.call(Entry { path: parent.clone(), is_dir: true }), "Up" }
-                }
-            }
-            h2 { class: "folder-path", title: "{location}", "{location}" }
-            if entries.read().is_empty() {
-                p { class: "folder-empty", "No Markdown notes or folders." }
-            } else {
-                ul {
-                    for entry in entries.read().iter().cloned() {
-                        li { key: "{entry.path:?}",
-                            button {
-                                class: if selected.as_ref() == Some(&entry.path) { "folder-entry current-note" } else { "folder-entry" },
-                                disabled: busy,
-                                title: "{entry.path.display()}",
-                                onclick: { let entry = entry.clone(); move |_| on_browse.call(entry.clone()) },
-                                "{display_name(&entry.path)}"
-                                if entry.is_dir { "/" }
-                            }
-                        }
                     }
                 }
             }

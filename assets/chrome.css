@@ -1,0 +1,113 @@
+.notebook-chrome {
+    position: relative;
+    height: 38px;
+    user-select: none;
+}
+
+.chrome-reveal,
+.chrome-drag {
+    position: absolute;
+    inset: 0;
+}
+
+.chrome-strip {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    height: 100%;
+    /* Match the centerline of the native traffic lights. */
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--workspace-rule, #e5e5e5);
+}
+
+.chrome-sidebar-rule {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--sidebar-width, max(160px, 22%)) - 1px);
+    width: 1px;
+    background: var(--workspace-rule, #e5e5e5);
+    pointer-events: none;
+}
+
+.chrome-left,
+.chrome-history {
+    display: flex;
+    align-items: center;
+}
+
+.chrome-left,
+.chrome-filename,
+.chrome-settings {
+    grid-area: 1 / 1;
+}
+
+.chrome-left {
+    position: relative;
+    justify-self: start;
+    margin-left: 82px;
+    gap: 8px;
+}
+
+.chrome-filename {
+    overflow: hidden;
+    margin-inline: min(176px, 50%);
+    color: #424242;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.workspace .notebook-chrome button {
+    display: grid;
+    grid-template-columns: none;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 4px;
+    padding: 0;
+    background: transparent;
+}
+
+.workspace .notebook-chrome button:enabled:hover {
+    background: #f3f3f3;
+}
+
+.workspace .notebook-chrome button:focus-visible {
+    outline: 2px solid #666;
+    outline-offset: -2px;
+}
+
+.workspace .notebook-chrome button:disabled {
+    opacity: .34;
+}
+
+.chrome-settings {
+    position: relative;
+    justify-self: end;
+    margin-right: 9px;
+}
+
+@media (max-width: 520px) {
+    .chrome-sidebar-rule {
+        display: none;
+    }
+
+    .chrome-left {
+        margin-left: 76px;
+        gap: 4px;
+    }
+
+    .workspace .notebook-chrome button {
+        width: 22px;
+    }
+
+    .chrome-filename {
+        margin-inline: min(150px, 50%);
+    }
+}

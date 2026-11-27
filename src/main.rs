@@ -1,6 +1,10 @@
+mod chrome;
 mod editor;
+mod note_history;
 mod notebook;
+mod notebook_menu;
 mod workspace;
+mod workspace_sidebar;
 
 use dioxus::desktop::{Config, WindowBuilder, tao::window::Theme};
 use dioxus::prelude::*;
@@ -11,7 +15,11 @@ fn main() {
         .with_theme(Some(Theme::Light));
 
     LaunchBuilder::desktop()
-        .with_cfg(Config::new().with_window(window))
+        .with_cfg(
+            Config::new()
+                .with_window(window)
+                .with_menu(notebook_menu::build()),
+        )
         .launch(App);
 }
 
