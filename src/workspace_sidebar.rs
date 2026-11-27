@@ -5,14 +5,14 @@ use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use dioxus::prelude::*;
 use time::{Date, OffsetDateTime, UtcOffset};
 
 use crate::notebook::{self, Entry, NoteDetails};
 
-type FolderDetails = HashMap<PathBuf, io::Result<(NoteDetails, Option<Date>)>>;
+type FolderDetails = HashMap<PathBuf, io::Result<(NoteDetails, Option<OffsetDateTime>)>>;
 
 #[component]
 pub(crate) fn WorkspaceSidebar(
@@ -22,6 +22,18 @@ pub(crate) fn WorkspaceSidebar(
     busy: bool,
     on_browse: EventHandler<Entry>,
 ) -> Element {
+    let mut today = use_signal(local_today);
+    use_future(move || async move {
+        loop {
+            let now = OffsetDateTime::now_utc();
+            let elapsed = Duration::new(now.second().into(), now.nanosecond());
+            tokio::time::sleep(Duration::from_secs(60) - elapsed).await;
+            let date = local_today();
+            if date != *today.peek() {
+                today.set(date);
+            }
+        }
+    });
     let details = use_resource(move || {
         let root = root.clone();
         let listed = entries();
@@ -36,8 +48,8 @@ pub(crate) fn WorkspaceSidebar(
                     .take_while(|_| active_worker.strong_count() != 0)
                     .map(|entry| {
                         let details = notebook::note_details(&root, &entry.path).map(|note| {
-                            let date = local_date(note.modified);
-                            (note, date)
+                            let modified = local_timestamp(note.modified);
+                            (note, modified)
                         });
                         (entry.path, details)
                     })
@@ -56,6 +68,7 @@ pub(crate) fn WorkspaceSidebar(
     if let Some(details) = folder_details {
         sort_by_date(&mut ordered, details);
     }
+    let today = today();
 
     rsx! {
         document::Stylesheet { href: asset!("/assets/sidebar.css") }
@@ -90,15 +103,22 @@ pub(crate) fn WorkspaceSidebar(
                                     title: "{name}",
                                     onclick: { let entry = entry.clone(); move |_| on_browse.call(entry.clone()) },
                                     if let Some(note) = note {
-                                        if let Some(date) = note.as_ref().ok().and_then(|(_, date)| *date) {
-                                            time {
-                                                class: "sidebar-date",
-                                                datetime: "{date}",
-                                                title: "Modified {date}",
-                                                "{date_label(date)}"
+                                        if let Some(modified) = note.as_ref().ok().and_then(|(_, modified)| *modified) {
+                                            {
+                                                let date = modified.date();
+                                                let hour = modified.hour();
+                                                let minute = modified.minute();
+                                                rsx! {
+                                                    time {
+                                                        class: "sidebar-date",
+                                                        datetime: "{date}T{hour:02}:{minute:02}",
+                                                        title: "Modified {date} at {hour:02}:{minute:02}",
+                                                        "{modified_label(modified, today)}"
+                                                    }
+                                                }
                                             }
                                         } else {
-                                            span { class: "sidebar-date", title: "Modified date unavailable", "—" }
+                                            span { class: "sidebar-date", title: "Modification time unavailable", "—" }
                                         }
                                     }
                                     img { class: "sidebar-entry-icon", src: icon, alt: "" }
@@ -132,17 +152,25 @@ fn sort_by_date(entries: &mut [&Entry], details: &FolderDetails) {
     });
 }
 
-fn local_date(modified: SystemTime) -> Option<Date> {
+fn local_today() -> Option<Date> {
+    OffsetDateTime::now_local().ok().map(OffsetDateTime::date)
+}
+
+fn local_timestamp(modified: SystemTime) -> Option<OffsetDateTime> {
     let nanos = match modified.duration_since(UNIX_EPOCH) {
         Ok(duration) => duration.as_nanos() as i128,
         Err(error) => -(error.duration().as_nanos() as i128),
     };
     let utc = OffsetDateTime::from_unix_timestamp_nanos(nanos).ok()?;
     let offset = UtcOffset::local_offset_at(utc).ok()?;
-    utc.checked_to_offset(offset).map(OffsetDateTime::date)
+    utc.checked_to_offset(offset)
 }
 
-fn date_label(date: Date) -> String {
+fn modified_label(modified: OffsetDateTime, today: Option<Date>) -> String {
+    let date = modified.date();
+    if today == Some(date) {
+        return format!("{:02}:{:02}", modified.hour(), modified.minute());
+    }
     format!(
         "{:02}/{:02}/{:02}",
         date.day(),
@@ -154,7 +182,17 @@ fn date_label(date: Date) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
+
+    #[test]
+    fn shows_local_time_until_midnight_then_shows_the_date() {
+        let date = Date::from_calendar_date(2026, time::Month::November, 27).unwrap();
+        let modified = date
+            .with_hms(0, 5, 0)
+            .unwrap()
+            .assume_offset(UtcOffset::from_hms(5, 30, 0).unwrap());
+        assert_eq!(modified_label(modified, Some(date)), "00:05");
+        assert_eq!(modified_label(modified, date.next_day()), "27/11/26");
+    }
 
     #[test]
     fn dates_sort_newest_first_after_folders_with_name_order_for_ties() {
