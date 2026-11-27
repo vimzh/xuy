@@ -1,6 +1,6 @@
 mod format_menu;
 mod highlight;
-mod image_drop;
+mod images;
 pub(crate) mod preview;
 pub(crate) mod status;
 mod tools;
@@ -196,9 +196,13 @@ fn MarkdownInput(
     paths: MarkdownPaths,
     format_menu: Element,
 ) -> Element {
+    let mut image_requests = use_signal(|| None::<document::Eval>);
     use_drop(move || {
         if let Some(tracker) = tracker.write().take() {
             let _ = tracker.send(());
+        }
+        if let Some(requests) = image_requests.write().take() {
+            let _ = requests.send(false);
         }
     });
     let color = cursor.color();
@@ -226,11 +230,18 @@ fn MarkdownInput(
                 aria_keyshortcuts: "Meta+S Shift+F10",
                 readonly: busy,
                 value: "{draft}",
-                onmounted: move |_| tracker.set(Some(document::eval(concat!(
-                    include_str!("code_blocks.js"),
-                    "\n",
-                    include_str!("editor_caret.js"),
-                )))),
+                onmounted: {
+                    let paths = paths.clone();
+                    let desktop = desktop.clone();
+                    move |_| {
+                        tracker.set(Some(document::eval(concat!(
+                            include_str!("code_blocks.js"),
+                            "\n",
+                            include_str!("editor_caret.js"),
+                        ))));
+                        image_requests.set(Some(images::listen(paths.clone(), desktop.clone(), importing_image, image_error)));
+                    }
+                },
                 ondrop: move |event| {
                     if event.data_transfer().files().is_empty() {
                         return;
@@ -249,7 +260,7 @@ fn MarkdownInput(
                     let desktop = desktop.clone();
                     importing_image.set(true);
                     spawn(async move {
-                        image_error.set(image_drop::insert(paths, sources, client_y, desktop).await.err());
+                        image_error.set(images::drop_files(paths, sources, client_y, desktop).await.err());
                         importing_image.set(false);
                     });
                 },

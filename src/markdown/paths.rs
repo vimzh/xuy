@@ -9,7 +9,7 @@ use std::path::{Component, Path, PathBuf};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use percent_encoding::percent_decode_str;
 
-const MAX_IMAGE_BYTES: u64 = 12 * 1024 * 1024;
+pub(crate) const MAX_IMAGE_BYTES: u64 = 12 * 1024 * 1024;
 
 #[derive(Clone, PartialEq)]
 pub(crate) struct MarkdownPaths {
@@ -205,7 +205,17 @@ pub(crate) fn read_image(file: fs::File) -> io::Result<(ImageKind, Vec<u8>)> {
     let mut image = file.take(MAX_IMAGE_BYTES + 1);
     let mut bytes = Vec::with_capacity(12);
     image.by_ref().take(12).read_to_end(&mut bytes)?;
-    let kind = match bytes.as_slice() {
+    let kind = image_kind(&bytes)?;
+    bytes.reserve((metadata.len() as usize).saturating_sub(bytes.len()));
+    image.read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > MAX_IMAGE_BYTES {
+        return Err(too_large());
+    }
+    Ok((kind, bytes))
+}
+
+pub(crate) fn image_kind(bytes: &[u8]) -> io::Result<ImageKind> {
+    Ok(match bytes {
         [0x89, b'P', b'N', b'G', b'\r', b'\n', 0x1a, b'\n', ..] => ImageKind::Png,
         [0xff, 0xd8, 0xff, ..] => ImageKind::Jpeg,
         [b'G', b'I', b'F', b'8', b'7' | b'9', b'a', ..] => ImageKind::Gif,
@@ -213,13 +223,7 @@ pub(crate) fn read_image(file: fs::File) -> io::Result<(ImageKind, Vec<u8>)> {
             ImageKind::Webp
         }
         _ => return Err(invalid("Use a PNG, JPEG, GIF, or WebP image")),
-    };
-    bytes.reserve((metadata.len() as usize).saturating_sub(bytes.len()));
-    image.read_to_end(&mut bytes)?;
-    if bytes.len() as u64 > MAX_IMAGE_BYTES {
-        return Err(too_large());
-    }
-    Ok((kind, bytes))
+    })
 }
 
 fn decode(value: &str) -> io::Result<Cow<'_, str>> {

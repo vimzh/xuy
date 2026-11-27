@@ -100,7 +100,13 @@ function installCodeBlockKeys(editor, listen, topAt, jump) {
         const end = lineEnd(value, offset);
         try {
             if (confirming) {
-                if (offset !== end || value.slice(start, end) !== "/code" || openFenceBefore(value, start)) return;
+                const command = value.slice(start, end);
+                if (offset !== end || (command !== "/code" && command !== "/image") || openFenceBefore(value, start)) return;
+                if (command === "/image") {
+                    const request = new CustomEvent("xuy-choose-images", { cancelable: true, detail: { start, end } });
+                    if (!editor.dispatchEvent(request)) event.preventDefault();
+                    return;
+                }
                 event.preventDefault();
                 insertCodeBlock(editor, start, end, "");
                 jump(editor.selectionStart, editor.selectionEnd);
