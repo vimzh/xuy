@@ -223,7 +223,8 @@ try {
     ] });
     changed.observe(editor, { attributes: true, attributeFilter: ["readonly"] });
     changed.observe(editor.closest(".workspace"), { attributes: true, attributeFilter: ["style"] });
-    for (const event of ["focusin", "focusout", "input"]) listen(editor, event, () => queue(true));
+    for (const event of ["focusin", "focusout"]) listen(editor, event, () => queue(true));
+    listen(editor, "input", event => queue(true, event.inputType === "insertFromPaste"));
     listen(editor, "dragover", event => {
         if (event.dataTransfer?.types.includes("Files")) {
             event.preventDefault();
