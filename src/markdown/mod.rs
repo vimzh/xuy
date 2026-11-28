@@ -171,6 +171,7 @@ fn render_inner(
                 Event::Start(Tag::FootnoteDefinition(footnote_id(&name).into()))
             }
             Event::FootnoteReference(name) => Event::FootnoteReference(footnote_id(&name).into()),
+            Event::SoftBreak => Event::HardBreak,
             Event::InlineHtml(text) if !allowed => Event::Text(text),
             Event::Html(text) => Event::Text(text),
             Event::Text(text) if !in_link => {
@@ -477,6 +478,26 @@ mod tests {
 
     fn preview(source: &str) -> String {
         render(source, None, |_| false)
+    }
+
+    #[test]
+    fn previews_source_line_breaks_within_paragraphs() {
+        use crate::markdown::edits::PreviewEdits;
+
+        let source = "First line\nSecond line  \nThird line\n\nAnother paragraph.\n";
+        assert_eq!(
+            preview(source),
+            "<p>First line<br />\nSecond line<br />\nThird line</p>\n<p>Another paragraph.</p>\n"
+        );
+        let (editable, runs) = render_editable(source, None, |_| false);
+        assert_eq!(editable.matches("<br />").count(), 2);
+
+        let mut edit = PreviewEdits::new(0, source, &runs);
+        assert_eq!(edit.replace(source, &runs, 1, "Changed line"), Ok(true));
+        assert_eq!(
+            edit.draft,
+            "First line\nChanged line  \nThird line\n\nAnother paragraph.\n"
+        );
     }
 
     #[test]

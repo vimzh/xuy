@@ -48,7 +48,7 @@ xuy reloads a clean note when another program writes to it. This works in Edit a
 
 Press `⇧⌘P` to switch between Markdown source and the rendered preview. The eye menu in the title bar also offers **Edit**, **Preview**, and **Side by Side**. Choose **Open Side by Side** in `⌘K` or **Notebook > Side by Side** to edit on the left and see the rendered draft update on the right. Press `⇧⌘P` from Side by Side to return to Edit. The horizontal arrow opens the width picker with **Narrow**, **Standard**, and **Wide**.
 
-Preview renders headings, emphasis, lists, quotes, code blocks, tables, strikethrough, task lists, footnotes, and GitHub-style callouts. Bare web URLs and email addresses become clickable links. Raw HTML displays as text.
+Preview keeps single line breaks from the source. It renders headings, emphasis, lists, quotes, code blocks, tables, strikethrough, task lists, footnotes, and GitHub-style callouts. Bare web URLs and email addresses become clickable links. Raw HTML displays as text.
 
 Use `[Next page](Next%20page.md)`, `[[Next page]]`, or `[Section](#section)` to navigate in Preview. Local links and images resolve relative to the current note. Preview displays notebook PNG, JPEG, GIF, and WebP images and can also load web images.
 
