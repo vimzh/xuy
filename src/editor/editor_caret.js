@@ -4,9 +4,13 @@ const frame = editor.parentElement;
 const layer = frame.querySelector(".note-caret-layer");
 const caret = layer.querySelector(".note-custom-caret");
 const highlightLayer = frame.querySelector(".note-highlight-marks");
+const selectionLayer = document.createElement("div");
+selectionLayer.className = "note-selection-marks";
+highlightLayer.after(selectionLayer);
 const mirror = document.createElement("div");
 mirror.className = "note-caret-mirror";
 const text = mirror.appendChild(document.createTextNode(""));
+const finalLine = mirror.appendChild(document.createTextNode(""));
 layer.appendChild(mirror);
 
 const controller = new AbortController();
@@ -31,11 +35,22 @@ function canDraw() {
             frame.dataset.caretSmooth === "true" || frame.dataset.caretBlinkStyle === "fade");
 }
 
+function hasSelection() {
+    return document.activeElement === editor && !document.hidden && !composing &&
+        editor.selectionStart !== editor.selectionEnd;
+}
+
 function hide() {
     snapNext = true;
     caret.hidden = true;
     caret.removeAttribute("data-caret-moving");
     frame.removeAttribute("data-caret-drawn");
+}
+
+function clearSelection() {
+    if (!frame.hasAttribute("data-selection-drawn")) return;
+    selectionLayer.replaceChildren();
+    frame.removeAttribute("data-selection-drawn");
 }
 
 function syncMirror() {
@@ -53,8 +68,9 @@ function syncMirror() {
     const editorValue = editor.value;
     if (editorValue !== value) {
         value = editorValue;
-        // Give empty documents and final blank lines a measurable insertion point.
-        text.data = value + "\u200b";
+        // A zero-width space inside the text node changes WebKit's glyph metrics.
+        text.data = value;
+        finalLine.data = !value || value.endsWith("\n") ? "\u200b" : "";
         graphemes = undefined;
         highlightsDirty = true;
     }
@@ -84,19 +100,53 @@ function drawHighlights(origin) {
     highlightLayer.style.transform = `translate(${-editor.scrollLeft}px, ${-editor.scrollTop}px)`;
 }
 
+function drawSelection(origin) {
+    range.setStart(text, editor.selectionStart);
+    range.setEnd(text, editor.selectionEnd);
+    const marks = document.createDocumentFragment();
+    const leftEdge = origin.left + editor.scrollLeft;
+    const topEdge = origin.top + editor.scrollTop;
+    for (const rect of range.getClientRects()) {
+        const left = Math.max(0, rect.left - leftEdge);
+        const top = Math.max(0, rect.top - topEdge);
+        // Represent a selected newline with a small mark at the end of its text.
+        const right = Math.min(editor.clientWidth, rect.right - leftEdge + (rect.width ? 0 : 4));
+        const bottom = Math.min(editor.clientHeight, rect.bottom - topEdge);
+        if (right <= left || bottom <= top) continue;
+        const mark = document.createElement("span");
+        mark.style.left = left + "px";
+        mark.style.top = top + "px";
+        mark.style.width = (right - left) + "px";
+        mark.style.height = (bottom - top) + "px";
+        marks.appendChild(mark);
+    }
+    selectionLayer.replaceChildren(marks);
+    frame.setAttribute("data-selection-drawn", "");
+}
+
 function draw() {
     nextFrame = 0;
     const drawCaret = canDraw();
-    if (!drawCaret && !highlightRanges.length) return hide();
+    const selection = hasSelection();
+    if (!selection) clearSelection();
+    if (!drawCaret && !selection && !highlightRanges.length) return hide();
     syncMirror();
     const origin = mirror.getBoundingClientRect();
     if (highlightRanges.length) drawHighlights(origin);
+    if (selection) drawSelection(origin);
     if (!drawCaret) return hide();
 
     const offset = editor.selectionEnd;
-    range.setStart(text, offset);
-    range.collapse(true);
+    setCaretRange(offset);
     let position = range.getBoundingClientRect();
+    if (offset > 0 && offset < value.length && value[offset - 1] !== "\n" && value[offset] !== "\n") {
+        range.setStart(text, offset - 1);
+        range.setEnd(text, offset + 1);
+        const [before, after] = range.getClientRects();
+        // At a wrap or direction change, only WebKit knows which visual edge owns the caret.
+        if (after && (Math.abs(before.top - after.top) > 1 ||
+            Math.max(before.left, after.left) - Math.min(before.right, after.right) > 1)) return hide();
+    }
     if (frame.dataset.caretShape !== "bar" && value[offset] !== "\n") {
         graphemes ??= segmenter.segment(value);
         const glyph = graphemes.containing(offset);
@@ -129,9 +179,11 @@ function draw() {
 }
 
 function queue(restart = false, snap = false) {
+    const selection = hasSelection();
+    if (!selection) clearSelection();
     if (!canDraw()) {
         hide();
-        if (!highlightRanges.length) return;
+        if (!selection && !highlightRanges.length) return;
     }
     restartBlink ||= restart;
     snapNext ||= snap;
@@ -167,9 +219,14 @@ function readHighlights() {
     if (!highlightRanges.length) highlightLayer.replaceChildren();
 }
 
-function offsetTop(offset) {
-    range.setStart(text, offset);
+function setCaretRange(offset) {
+    if (offset === value.length && finalLine.length) range.setStart(finalLine, 0);
+    else range.setStart(text, offset);
     range.collapse(true);
+}
+
+function offsetTop(offset) {
+    setCaretRange(offset);
     return range.getBoundingClientRect().top - mirror.getBoundingClientRect().top;
 }
 
@@ -200,8 +257,7 @@ function imageDropTarget(event) {
     const lineStarts = [0];
     for (const newline of value.matchAll(/\n/g)) lineStarts.push(newline.index + 1);
     function top(offset) {
-        range.setStart(text, offset);
-        range.collapse(true);
+        setCaretRange(offset);
         return range.getBoundingClientRect().top;
     }
     const origin = top(0);
@@ -224,6 +280,7 @@ try {
     changed.observe(editor, { attributes: true, attributeFilter: ["readonly"] });
     changed.observe(editor.closest(".workspace"), { attributes: true, attributeFilter: ["style"] });
     for (const event of ["focusin", "focusout"]) listen(editor, event, () => queue(true));
+    listen(editor, "select", () => queue(true));
     listen(editor, "input", event => queue(true, event.inputType === "insertFromPaste"));
     listen(editor, "dragover", event => {
         if (event.dataTransfer?.types.includes("Files")) {
@@ -233,7 +290,12 @@ try {
     });
     listen(editor, "xuy-image-drop-target", imageDropTarget);
     listen(editor, "scroll", () => queue(false, true));
-    listen(editor, "compositionstart", () => { composing = true; editor.dataset.composing = "true"; hide(); });
+    listen(editor, "compositionstart", () => {
+        composing = true;
+        editor.dataset.composing = "true";
+        hide();
+        clearSelection();
+    });
     listen(editor, "compositionend", () => { composing = false; delete editor.dataset.composing; queue(true); });
     installCodeBlockKeys(editor, listen, offset => {
         syncMirror();
@@ -256,4 +318,6 @@ try {
     cancelAnimationFrame(nextFrame);
     mirror.remove();
     hide();
+    clearSelection();
+    selectionLayer.remove();
 }

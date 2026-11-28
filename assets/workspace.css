@@ -284,6 +284,20 @@
     caret-color: transparent;
 }
 
+.note-input-frame[data-selection-drawn] .note-input::selection {
+    background: transparent;
+}
+
+.note-selection-marks {
+    position: absolute;
+    inset: 0;
+}
+
+.note-selection-marks > span {
+    position: absolute;
+    background: var(--text-selection);
+}
+
 .note-custom-caret {
     position: absolute;
     inset: 0 auto auto 0;
