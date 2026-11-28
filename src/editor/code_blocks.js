@@ -100,9 +100,9 @@ function installCodeBlockKeys(editor, listen, topAt, jump) {
         const end = lineEnd(value, offset);
         try {
             if (confirming) {
-                const command = value.slice(start, end);
-                if (offset !== end || (command !== "/code" && command !== "/image") || openFenceBefore(value, start)) return;
-                if (command === "/image") {
+                const command = /^ {0,3}\/(code|image)[ \t]*$/.exec(value.slice(start, offset));
+                if (!command || /[^ \t]/.test(value.slice(offset, end)) || openFenceBefore(value, start)) return;
+                if (command[1] === "image") {
                     const request = new CustomEvent("xuy-choose-images", { cancelable: true, detail: { start, end } });
                     if (!editor.dispatchEvent(request)) event.preventDefault();
                     return;

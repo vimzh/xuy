@@ -22,7 +22,8 @@ pub(super) fn FormatMenu(
     rsx! {
         document::Stylesheet { href: asset!("/assets/editor-format-menu.css") }
         div {
-            id: "editor-format-menu", popover: "auto", role: "group", aria_label: "Format selected text",
+            // Keep the popover open when WebKit handles the opening right-button release.
+            id: "editor-format-menu", popover: "manual", role: "group", aria_label: "Format selected text",
             onmounted: move |_| async move {
                 let script = document::eval(include_str!("format_menu.js"));
                 bridge.set(Some(script));
