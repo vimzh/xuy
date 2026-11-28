@@ -3,16 +3,17 @@
 use dioxus::prelude::{dioxus_core::use_drop, *};
 use tokio::time::{Duration, sleep};
 
-use crate::markdown::edits::{EditableText, PreviewEdits};
+use crate::markdown::RenderedNote;
+use crate::markdown::edits::PreviewEdits;
 use crate::markdown::paths::MarkdownPaths;
 
-use super::{render_editable_preview, render_preview};
+use super::render_note_preview;
 
 pub(crate) type PreviewTarget = (String, bool);
 
 struct RenderedPreview {
-    html: String,
-    editable: Option<(String, Vec<EditableText>)>,
+    note: RenderedNote,
+    source: String,
     generation: u64,
 }
 
@@ -48,18 +49,10 @@ pub(crate) fn MarkdownPreview(
             let source = draft.peek().clone();
             let revision = *generation.peek() + 1;
             generation.set(revision);
-            tokio::task::spawn_blocking(move || {
-                let (html, editable) = if editable {
-                    let (html, runs) = render_editable_preview(&source, &paths);
-                    (html, Some((source, runs)))
-                } else {
-                    (render_preview(&source, Some(&paths)), None)
-                };
-                RenderedPreview {
-                    html,
-                    editable,
-                    generation: revision,
-                }
+            tokio::task::spawn_blocking(move || RenderedPreview {
+                note: render_note_preview(&source, &paths, editable),
+                source,
+                generation: revision,
             })
             .await
         }
@@ -88,27 +81,27 @@ pub(crate) fn MarkdownPreview(
     let receive_edit = move |(kind, revision, index, value): (String, u64, usize, String)| {
         if kind == "blur" {
             focused.set(false);
-            return;
+            return None;
         }
         let latest = rendered.peek();
-        let Some(Ok(preview)) = latest.as_ref() else {
-            return;
-        };
-        let Some((original, runs)) = preview.editable.as_ref() else {
-            return;
-        };
+        let preview = latest.as_ref()?.as_ref().ok()?;
         if preview.generation != revision {
-            if kind == "input" {
+            if kind != "focus" {
                 feedback.set(Some("The note changed. Try editing the refreshed preview."));
             }
-            return;
+            return None;
         }
         let mut active = edits.write();
         if active
             .as_ref()
             .is_none_or(|edit| edit.generation != revision)
         {
-            *active = Some(PreviewEdits::new(revision, original, runs));
+            *active = Some(PreviewEdits::new(
+                revision,
+                &preview.source,
+                &preview.note.text,
+                &preview.note.tasks,
+            ));
         }
         let edit = active
             .as_mut()
@@ -116,22 +109,36 @@ pub(crate) fn MarkdownPreview(
         if edit.draft != *draft.peek() {
             focused.set(false);
             feedback.set(Some("The note changed. Try editing the refreshed preview."));
-            return;
+            return None;
         }
-        focused.set(true);
-        if kind == "input" {
-            match edit.replace(original, runs, index, &value) {
-                Ok(true) => {
-                    let updated = edit.draft.clone();
-                    drop(active);
-                    on_edit.call(updated);
-                    feedback.set(None);
-                }
-                Ok(false) => {}
-                Err(error) => {
-                    feedback.set(Some(error));
-                    focused.set(false);
-                }
+        let result = match kind.as_str() {
+            "focus" => {
+                focused.set(true);
+                return None;
+            }
+            "input" if editable => {
+                focused.set(true);
+                edit.replace(&preview.source, &preview.note.text, index, &value)
+                    .map(|changed| (changed, None))
+            }
+            "task" => edit
+                .toggle_task(index)
+                .map(|checked| (true, Some((revision, index, checked)))),
+            _ => return None,
+        };
+        match result {
+            Ok((true, reply)) => {
+                let updated = edit.draft.clone();
+                drop(active);
+                on_edit.call(updated);
+                feedback.set(None);
+                reply
+            }
+            Ok((false, _)) => None,
+            Err(error) => {
+                feedback.set(Some(error));
+                focused.set(false);
+                None
             }
         }
     };
@@ -142,7 +149,7 @@ pub(crate) fn MarkdownPreview(
             class: "markdown-preview",
             aria_label: if editable { "Editable Markdown preview" } else { "Markdown preview" },
             tabindex: "0",
-            "inert": (editable && busy).then_some(""),
+            "inert": busy.then_some(""),
             onmounted: move |event| async move {
                 if editable { let _ = event.set_focus(true).await; }
             },
@@ -154,18 +161,21 @@ pub(crate) fn MarkdownPreview(
                     div {
                         id: "markdown-preview-content",
                         "data-preview-generation": "{preview.generation}",
-                        dangerous_inner_html: "{preview.html}",
+                        dangerous_inner_html: "{preview.note.html}",
                         onmounted: move |_| async move {
-                            if editable {
-                                let mut receive_edit = receive_edit;
-                                spawn(async move {
-                                    let mut eval = document::eval(include_str!("markdown_preview_edit.js"));
-                                    if let Some(previous) = edit_bridge.write().replace(eval) {
-                                        let _ = previous.send(());
+                            let mut receive_edit = receive_edit;
+                            spawn(async move {
+                                let mut eval = document::eval(include_str!("markdown_preview_edit.js"));
+                                if let Some(previous) = edit_bridge.write().replace(eval) {
+                                    let _ = previous.send(());
+                                }
+                                while let Ok(change) = eval.recv().await {
+                                    if let Some(reply) = receive_edit(change)
+                                        && let Err(error) = eval.send(reply) {
+                                        eprintln!("Could not update the rendered checklist: {error}");
                                     }
-                                    while let Ok(change) = eval.recv().await { receive_edit(change); }
-                                });
-                            }
+                                }
+                            });
                             let mut eval = document::eval(include_str!("markdown_preview_links.js"));
                             if let Some(previous) = bridge.write().replace(eval) {
                                 let _ = previous.send(None::<String>);

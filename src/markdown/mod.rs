@@ -30,24 +30,38 @@ pub(crate) fn render(
     paths: Option<&MarkdownPaths>,
     allow_inline: impl FnMut(usize) -> bool,
 ) -> String {
-    render_inner(source, paths, allow_inline, None)
+    render_inner(source, paths, allow_inline, None, None)
 }
 
-pub(crate) fn render_editable(
+pub(crate) struct RenderedNote {
+    pub(crate) html: String,
+    pub(crate) text: Vec<EditableText>,
+    pub(crate) tasks: Vec<usize>,
+}
+
+pub(crate) fn render_note(
     source: &str,
     paths: Option<&MarkdownPaths>,
     allow_inline: impl FnMut(usize) -> bool,
-) -> (String, Vec<EditableText>) {
-    let mut editable = Vec::new();
-    let mut html = render_inner(source, paths, allow_inline, Some(&mut editable));
-    if html.is_empty() && source.trim().is_empty() {
+    editable: bool,
+) -> RenderedNote {
+    let mut text = Vec::new();
+    let mut tasks = Vec::new();
+    let mut html = render_inner(
+        source,
+        paths,
+        allow_inline,
+        editable.then_some(&mut text),
+        Some(&mut tasks),
+    );
+    if editable && html.is_empty() && source.trim().is_empty() {
         html.push_str("<p>");
         let range = 0..source.len();
-        let span = editable_span("", range.clone(), range, true, &mut editable);
+        let span = editable_span("", range.clone(), range, true, &mut text);
         html.push_str(&span);
         html.push_str("</p>");
     }
-    (html, editable)
+    RenderedNote { html, text, tasks }
 }
 
 fn render_inner(
@@ -55,6 +69,7 @@ fn render_inner(
     paths: Option<&MarkdownPaths>,
     mut allow_inline: impl FnMut(usize) -> bool,
     mut editable: Option<&mut Vec<EditableText>>,
+    mut tasks: Option<&mut Vec<usize>>,
 ) -> String {
     let mut input = TextMergeWithOffset::new(Parser::new_ext(source, OPTIONS).into_offset_iter());
     let mut finder = LinkFinder::new();
@@ -171,6 +186,15 @@ fn render_inner(
                 Event::Start(Tag::FootnoteDefinition(footnote_id(&name).into()))
             }
             Event::FootnoteReference(name) => Event::FootnoteReference(footnote_id(&name).into()),
+            Event::TaskListMarker(checked) => match tasks.as_deref_mut() {
+                Some(tasks) => {
+                    let index = tasks.len();
+                    // The parser's marker range ends at the closing bracket.
+                    tasks.push(range.end - 2);
+                    Event::Html(task_checkbox(index, checked, &source[range.end..]).into())
+                }
+                None => event,
+            },
             Event::SoftBreak => Event::HardBreak,
             Event::InlineHtml(text) if !allowed => Event::Text(text),
             Event::Html(text) => Event::Text(text),
@@ -200,6 +224,22 @@ fn render_inner(
     let mut output = String::new();
     html::push_html(&mut output, events.into_iter());
     output
+}
+
+fn task_checkbox(index: usize, checked: bool, remaining: &str) -> String {
+    let label = remaining.lines().next().unwrap_or_default().trim();
+    let label = if label.is_empty() {
+        "Checklist item"
+    } else {
+        label
+    };
+    let label = label
+        .replace('&', "&amp;")
+        .replace('"', "&quot;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;");
+    let checked = if checked { " checked" } else { "" };
+    format!("<input type=\"checkbox\" data-md-task=\"{index}\" aria-label=\"{label}\"{checked}/>\n")
 }
 
 fn starts_with_ignoring_case(value: &str, prefix: &str) -> bool {
@@ -453,23 +493,23 @@ fn footnote_id(name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{render, render_editable};
+    use super::{render, render_note};
 
     #[test]
     fn edit_ranges_preserve_nested_formatting_and_reference_links() {
         use crate::markdown::edits::PreviewEdits;
 
         let source = "**_Bold_** with [label][id].\n\n[id]: https://example.org";
-        let (html, runs) = render_editable(source, None, |_| false);
-        assert!(html.contains("<strong><em><span data-md-text=\"0\""));
-        assert!(html.contains(">label</a>"));
-        let mut edit = PreviewEdits::new(0, source, &runs);
-        edit.replace(source, &runs, 0, "Changed").unwrap();
+        let note = render_note(source, None, |_| false, true);
+        assert!(note.html.contains("<strong><em><span data-md-text=\"0\""));
+        assert!(note.html.contains(">label</a>"));
+        let mut edit = PreviewEdits::new(0, source, &note.text, &note.tasks);
+        edit.replace(source, &note.text, 0, "Changed").unwrap();
         assert_eq!(
             edit.draft,
             "**_Changed_** with [label][id].\n\n[id]: https://example.org"
         );
-        edit.replace(source, &runs, 0, "").unwrap();
+        edit.replace(source, &note.text, 0, "").unwrap();
         assert_eq!(
             edit.draft,
             " with [label][id].\n\n[id]: https://example.org"
@@ -489,14 +529,44 @@ mod tests {
             preview(source),
             "<p>First line<br />\nSecond line<br />\nThird line</p>\n<p>Another paragraph.</p>\n"
         );
-        let (editable, runs) = render_editable(source, None, |_| false);
-        assert_eq!(editable.matches("<br />").count(), 2);
+        let note = render_note(source, None, |_| false, true);
+        assert_eq!(note.html.matches("<br />").count(), 2);
 
-        let mut edit = PreviewEdits::new(0, source, &runs);
-        assert_eq!(edit.replace(source, &runs, 1, "Changed line"), Ok(true));
+        let mut edit = PreviewEdits::new(0, source, &note.text, &note.tasks);
+        assert_eq!(
+            edit.replace(source, &note.text, 1, "Changed line"),
+            Ok(true)
+        );
         assert_eq!(
             edit.draft,
             "First line\nChanged line  \nThird line\n\nAnother paragraph.\n"
+        );
+    }
+
+    #[test]
+    fn toggles_only_parsed_task_markers_after_preview_text_edits() {
+        use crate::markdown::edits::PreviewEdits;
+
+        let source = "Intro 🧭\r\n\r\n- [ ] First\r\n  - [X] Nested \"quoted\"\r\n\r\n```\r\n- [ ] Literal\r\n```\r\n";
+        assert!(preview(source).contains("disabled=\"\" type=\"checkbox\""));
+        let note = render_note(source, None, |_| false, true);
+        assert_eq!(note.tasks.len(), 2);
+        assert_eq!(note.html.matches("data-md-task=").count(), 2);
+        assert!(
+            note.html
+                .contains("aria-label=\"Nested &quot;quoted&quot;\"")
+        );
+        let mut edit = PreviewEdits::new(0, source, &note.text, &note.tasks);
+        assert_eq!(
+            edit.replace(source, &note.text, 0, "Longer intro"),
+            Ok(true)
+        );
+        assert_eq!(edit.toggle_task(0), Ok(true));
+        assert_eq!(edit.toggle_task(1), Ok(false));
+        assert!(edit.toggle_task(2).is_err());
+        assert_eq!(
+            edit.draft,
+            "Longer intro\r\n\r\n- [x] First\r\n  - [ ] Nested \"quoted\"\r\n\r\n```\r\n- [ ] Literal\r\n```\r\n"
         );
     }
 

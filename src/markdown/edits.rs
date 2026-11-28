@@ -29,14 +29,21 @@ pub(crate) struct PreviewEdits {
     pub(crate) generation: u64,
     pub(crate) draft: String,
     ranges: Vec<Range<usize>>,
+    tasks: Vec<usize>,
 }
 
 impl PreviewEdits {
-    pub(crate) fn new(generation: u64, draft: &str, text: &[EditableText]) -> Self {
+    pub(crate) fn new(
+        generation: u64,
+        draft: &str,
+        text: &[EditableText],
+        tasks: &[usize],
+    ) -> Self {
         Self {
             generation,
             draft: draft.to_owned(),
             ranges: text.iter().map(|run| run.enclosing.clone()).collect(),
+            tasks: tasks.to_vec(),
         }
     }
 
@@ -91,7 +98,24 @@ impl PreviewEdits {
         for later in &mut self.ranges[index + 1..] {
             *later = end + (later.start - range.end)..end + (later.end - range.end);
         }
+        for task in self.tasks.iter_mut().filter(|task| **task >= range.end) {
+            *task = end + (*task - range.end);
+        }
         Ok(true)
+    }
+
+    pub(crate) fn toggle_task(&mut self, index: usize) -> Result<bool, &'static str> {
+        let error = "Could not find the checklist item to update.";
+        let offset = *self.tasks.get(index).ok_or(error)?;
+        let marker = self.draft.as_bytes().get(offset).ok_or(error)?;
+        let checked = match marker {
+            b'x' | b'X' => false,
+            byte if byte.is_ascii_whitespace() => true,
+            _ => return Err(error),
+        };
+        self.draft
+            .replace_range(offset..offset + 1, if checked { "x" } else { " " });
+        Ok(checked)
     }
 }
 
@@ -176,7 +200,7 @@ mod tests {
             EditableText::new(2..6, 0..8, "💬", false),
             EditableText::new(8..13, 8..13, " and ", false),
         ];
-        let mut edit = PreviewEdits::new(1, original, &text);
+        let mut edit = PreviewEdits::new(1, original, &text, &[]);
         assert_eq!(edit.replace(original, &text, 0, "new * text"), Ok(true));
         assert_eq!(edit.replace(original, &text, 1, " then "), Ok(true));
         assert_eq!(
@@ -197,7 +221,7 @@ mod tests {
         let original = "A paragraph.";
         let length = original.len();
         let runs = [EditableText::new(0..length, 0..length, original, true)];
-        let mut edit = PreviewEdits::new(0, original, &runs);
+        let mut edit = PreviewEdits::new(0, original, &runs, &[]);
         assert_eq!(
             edit.replace(
                 original,

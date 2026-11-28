@@ -50,6 +50,8 @@ Press `⇧⌘P` to switch between Markdown source and the rendered preview. The 
 
 Preview keeps single line breaks from the source. It renders headings, emphasis, lists, quotes, code blocks, tables, strikethrough, task lists, footnotes, and GitHub-style callouts. Bare web URLs and email addresses become clickable links. Raw HTML displays as text.
 
+Click a checklist box in Preview or Side by Side to check or uncheck it. You can also focus it with Tab and press Space. xuy saves the change to the Markdown file.
+
 Use `[Next page](Next%20page.md)`, `[[Next page]]`, or `[Section](#section)` to navigate in Preview. Local links and images resolve relative to the current note. Preview displays notebook PNG, JPEG, GIF, and WebP images and can also load web images.
 
 In Edit or Side by Side, type `/image` on its own line and press Enter or Tab to choose image files. You can also copy an image or screenshot and paste it into the Markdown source. xuy saves a copy beside the note and inserts a relative Markdown image link.

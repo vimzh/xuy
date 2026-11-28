@@ -420,15 +420,19 @@ pub(crate) fn render_preview(source: &str, paths: Option<&MarkdownPaths>) -> Str
     })
 }
 
-pub(crate) fn render_editable_preview(
+pub(crate) fn render_note_preview(
     source: &str,
     paths: &MarkdownPaths,
-) -> (String, Vec<crate::markdown::edits::EditableText>) {
+    editable: bool,
+) -> markdown::RenderedNote {
     let marks = highlight::marks(source);
     let mut offsets = highlight::mark_offsets(&marks).peekable();
-    markdown::render_editable(source, Some(paths), |offset| {
-        offsets.next_if_eq(&offset).is_some()
-    })
+    markdown::render_note(
+        source,
+        Some(paths),
+        |offset| offsets.next_if_eq(&offset).is_some(),
+        editable,
+    )
 }
 
 #[cfg(test)]
