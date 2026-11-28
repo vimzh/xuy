@@ -248,6 +248,17 @@ function jump(start, end) {
     queue(true, true);
 }
 
+function replaceSource(source) {
+    if (editor.value === source.replace(/\r\n?/g, "\n")) return;
+    const { selectionStart, selectionEnd, selectionDirection, scrollTop, scrollLeft } = editor;
+    editor.value = source;
+    editor.setSelectionRange(selectionStart, selectionEnd, selectionDirection);
+    editor.scrollTop = scrollTop;
+    editor.scrollLeft = scrollLeft;
+    editor.dispatchEvent(new Event("selectionchange", { bubbles: true }));
+    queue(true, true);
+}
+
 // Use the same wrapped layout as the textarea to find the logical line at the drop.
 function imageDropTarget(event) {
     syncMirror();
@@ -310,7 +321,10 @@ try {
     listen(window, "focus", () => queue(true));
     readHighlights();
     queue(true);
-    for (let selection; Array.isArray(selection = await dioxus.recv());) jump(...selection);
+    for (let message; (message = await dioxus.recv()) !== null;) {
+        if (typeof message === "string") replaceSource(message);
+        else jump(...message);
+    }
 } finally {
     controller.abort();
     resized.disconnect();

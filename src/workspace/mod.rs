@@ -72,6 +72,7 @@ pub(crate) fn Workspace(
     let mut selected = use_signal(|| opened.note.as_ref().map(|(path, _)| path.clone()));
     let mut draft = use_signal(|| opened.note.map_or_else(String::new, |(_, text)| text));
     let mut saved = use_signal(|| draft.peek().clone());
+    let mut source_revision = use_signal(|| 0u64);
     let mut last_edit = use_signal(|| None::<Instant>);
     let mut failed_edit = use_signal(|| None::<Instant>);
     let mut conflict = use_signal(|| None::<Conflict>);
@@ -149,6 +150,7 @@ pub(crate) fn Workspace(
                                 saved.set(text.clone());
                                 if *draft.peek() != text {
                                     draft.set(text);
+                                    *source_revision.write() += 1;
                                 }
                                 last_edit.set(None);
                                 failed_edit.set(None);
@@ -453,6 +455,7 @@ pub(crate) fn Workspace(
             Ok(text) => {
                 saved.set(text.clone());
                 draft.set(text);
+                *source_revision.write() += 1;
                 last_edit.set(None);
                 failed_edit.set(None);
                 conflict.set(None);
@@ -737,7 +740,7 @@ pub(crate) fn Workspace(
                 div { class: "workspace-content",
                     if let Some(path) = selected() {
                         Editor { key: "{path:?}",
-                            draft, dirty, view_mode, edit_in_preview, chrome_hidden, busy: (busy() && !saving()) || modal_open(), summary,
+                            draft, source_revision, dirty, view_mode, edit_in_preview, chrome_hidden, busy: (busy() && !saving()) || modal_open(), summary,
                             paths: MarkdownPaths::new(root.peek().clone(), path), preview_anchor,
                             on_preview_open: open_preview_link,
                             on_edit: move |text| {

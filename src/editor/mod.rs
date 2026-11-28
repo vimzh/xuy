@@ -59,6 +59,7 @@ impl ViewMode {
 #[component]
 pub(crate) fn Editor(
     draft: Signal<String>,
+    mut source_revision: Signal<u64>,
     dirty: Memo<bool>,
     mut view_mode: Signal<ViewMode>,
     edit_in_preview: bool,
@@ -128,7 +129,7 @@ pub(crate) fn Editor(
                     if dirty() { "Unsaved changes" }
                 }
                 MarkdownInput {
-                    draft, chrome_hidden, busy, hidden: mode == ViewMode::Preview, cursor, tracker, on_edit, summary,
+                    draft, source_revision, chrome_hidden, busy, hidden: mode == ViewMode::Preview, cursor, tracker, on_edit, summary,
                     paths: paths.clone(),
                     format_menu: rsx! {
                         FormatMenu {
@@ -144,6 +145,7 @@ pub(crate) fn Editor(
                         on_open: on_preview_open,
                         on_edit: move |text| {
                             on_edit.call(text);
+                            *source_revision.write() += 1;
                             if !*chrome_hidden.peek() { chrome_hidden.set(true); }
                         },
                     }
@@ -186,6 +188,7 @@ pub(crate) fn Editor(
 #[component]
 fn MarkdownInput(
     draft: Signal<String>,
+    source_revision: Signal<u64>,
     mut chrome_hidden: Signal<bool>,
     busy: bool,
     hidden: bool,
@@ -196,6 +199,20 @@ fn MarkdownInput(
     paths: MarkdownPaths,
     format_menu: Element,
 ) -> Element {
+    // Native edits already update the textarea. Replaying a draft can reset its live selection.
+    let initial_value = use_hook(|| draft.peek().clone());
+    let mut applied_revision = use_signal(|| *source_revision.peek());
+    use_effect(move || {
+        let revision = source_revision();
+        if revision != *applied_revision.peek()
+            && let Some(bridge) = *tracker.read()
+        {
+            match bridge.send(draft.peek().as_str()) {
+                Ok(()) => applied_revision.set(revision),
+                Err(error) => eprintln!("Could not refresh the Markdown source: {error}"),
+            }
+        }
+    });
     let mut image_requests = use_signal(|| None::<document::Eval>);
     use_drop(move || {
         if let Some(tracker) = tracker.write().take() {
@@ -229,7 +246,7 @@ fn MarkdownInput(
                 aria_label: "Markdown source",
                 aria_keyshortcuts: "Meta+S Shift+F10",
                 readonly: busy,
-                value: "{draft}",
+                initial_value: "{initial_value}",
                 onmounted: {
                     let paths = paths.clone();
                     let desktop = desktop.clone();
