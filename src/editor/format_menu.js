@@ -7,6 +7,7 @@ const options = { signal: listeners.signal };
 const available = () => editor.isConnected && !editor.readOnly &&
     !editor.dataset.composing && !editor.closest("[hidden], [inert]");
 let selection;
+let contextSelection;
 
 function dismiss() {
     if (menu.matches(":popover-open")) menu.hidePopover();
@@ -19,10 +20,16 @@ function position(point, size, limit) {
     return Math.max(margin, Math.min(offset, limit - size - margin));
 }
 
-function open(x, y) {
+function readSelection() {
     const { value, selectionStart: start, selectionEnd: end, selectionDirection: direction } = editor;
+    return { value, start, end, direction };
+}
+
+function open(x, y) {
+    const current = readSelection();
+    const { value, start, end } = current;
     if (!available() || !value.slice(start, end).trim()) return false;
-    selection = { value, start, end, direction };
+    selection = current;
     error.hidden = true;
     if (!menu.matches(":popover-open")) menu.showPopover();
     const { width, height } = menu.getBoundingClientRect();
@@ -33,6 +40,14 @@ function open(x, y) {
 }
 
 editor.addEventListener("contextmenu", event => {
+    // WebKit can select a newline or the nearest word before firing contextmenu.
+    const previous = contextSelection;
+    contextSelection = undefined;
+    if (previous && previous.value === editor.value &&
+        (previous.start !== editor.selectionStart || previous.end !== editor.selectionEnd ||
+            previous.direction !== editor.selectionDirection)) {
+        editor.setSelectionRange(previous.start, previous.end, previous.direction);
+    }
     if (open(event.clientX, event.clientY)) {
         event.preventDefault();
     } else if (available()) {
@@ -42,6 +57,7 @@ editor.addEventListener("contextmenu", event => {
     }
 }, options);
 editor.addEventListener("keydown", event => {
+    contextSelection = undefined;
     if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
     const { left, top } = editor.getBoundingClientRect();
     if (open(Math.max(0, left), Math.max(0, top))) event.preventDefault();
@@ -119,7 +135,12 @@ function dismissFromOutside(event) {
 }
 
 document.addEventListener("focusin", dismissFromOutside, options);
-document.addEventListener("pointerdown", dismissFromOutside, { ...options, capture: true });
+document.addEventListener("pointerdown", event => {
+    dismissFromOutside(event);
+    contextSelection = event.target === editor &&
+        (event.button === 2 || (event.button === 0 && event.ctrlKey)) ? readSelection() : undefined;
+}, { ...options, capture: true });
+editor.addEventListener("pointercancel", () => { contextSelection = undefined; }, options);
 window.addEventListener("resize", dismiss, options);
 
 const availability = new MutationObserver(() => {
